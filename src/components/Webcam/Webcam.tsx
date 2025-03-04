@@ -1,25 +1,38 @@
 import React, { useRef, useEffect, useMemo, useCallback, useState } from 'react';
-import { Card, CardContent, Typography, Button } from '@mui/material';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
 const Webcam: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const predictionIntervalRef = useRef<number | null>(null);
+
+  // State for freeze/resume and checkbox settings.
   const [frozen, setFrozen] = useState(false);
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [frozenPredictions, setFrozenPredictions] = useState<Prediction[]>([]);
+  const [livePredictions, setLivePredictions] = useState(true);
+  const [showPredictionScore, setShowPredictionScore] = useState(true);
 
-  // Memoize the model instance so it isn't recreated on every render.
+  // Memoize the model instance.
   const yoloModel = useMemo(() => new YoloModelTF('./models/tiles_yolo8s/model.json'), []);
 
-  // Process predictions by capturing an offscreen frame, running inference, and drawing on the overlay.
+  // Process predictions: capture an offscreen frame, run inference, and (if live) draw on the overlay.
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
     const overlayCanvas = overlayCanvasRef.current;
+    // Guard: if video or overlay canvas not ready or dimensions not available.
     if (!video || !overlayCanvas) return [];
-
-    // Create an offscreen canvas to capture the current video frame.
+    if (video.videoWidth === 0 || video.videoHeight === 0) return [];
+    
+    // Create offscreen canvas.
     const offscreenCanvas = document.createElement('canvas');
     offscreenCanvas.width = video.videoWidth;
     offscreenCanvas.height = video.videoHeight;
@@ -27,15 +40,15 @@ const Webcam: React.FC = () => {
     if (!offscreenCtx) return [];
     offscreenCtx.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
-    // Run YOLO inference using the offscreen canvas.
+    // Run YOLO inference.
     const detections = await yoloModel.predict(offscreenCanvas);
 
-    // Ensure the overlay canvas matches video dimensions.
+    // Set overlay canvas dimensions.
     overlayCanvas.width = video.videoWidth;
     overlayCanvas.height = video.videoHeight;
     const ctx = overlayCanvas.getContext('2d');
-    if (ctx) {
-      // Clear and draw new detections.
+    if (ctx && !frozen && livePredictions) {
+      // Clear previous drawings.
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       detections.forEach((detection) => {
         const [x, y, width, height] = detection.bbox;
@@ -44,15 +57,14 @@ const Webcam: React.FC = () => {
         ctx.strokeRect(x, y, width, height);
         ctx.fillStyle = 'red';
         ctx.font = '18px Arial';
-        ctx.fillText(
-          `${detection.class} (${(detection.score * 100).toFixed(1)}%)`,
-          x,
-          y > 20 ? y - 5 : y + 20
-        );
+        const labelText = showPredictionScore
+          ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
+          : detection.class;
+        ctx.fillText(labelText, x, y > 20 ? y - 5 : y + 20);
       });
     }
     return detections;
-  }, [yoloModel]);
+  }, [yoloModel, showPredictionScore, frozen, livePredictions]);
 
   const startVideo = useCallback(async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -80,22 +92,45 @@ const Webcam: React.FC = () => {
     }
   }, []);
 
-  // On mount: load model, start video, and start continuous predictions.
+  // On mount, load model and start video.
   useEffect(() => {
     yoloModel.loadModel();
     startVideo();
-    predictionIntervalRef.current = window.setInterval(processPredictions, 500);
     return () => {
-      if (predictionIntervalRef.current) clearInterval(predictionIntervalRef.current);
       const video = videoRef.current;
       if (video && video.srcObject) {
         const stream = video.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [yoloModel, startVideo, processPredictions]);
+  }, [yoloModel, startVideo]);
 
-  // When frozen and predictions are available, redraw them to the overlay canvas.
+  // Manage the prediction interval based on livePredictions and frozen.
+  useEffect(() => {
+    if (predictionIntervalRef.current) {
+      clearInterval(predictionIntervalRef.current);
+      predictionIntervalRef.current = null;
+    }
+    if (!frozen && livePredictions) {
+      predictionIntervalRef.current = window.setInterval(processPredictions, 500);
+    }
+    return () => {
+      if (predictionIntervalRef.current) clearInterval(predictionIntervalRef.current);
+    };
+  }, [livePredictions, frozen, processPredictions]);
+
+  // Additional effect: When live predictions is unchecked (and video not frozen), clear overlay canvas once.
+  useEffect(() => {
+    if (!livePredictions && !frozen && overlayCanvasRef.current && videoRef.current) {
+      const overlayCanvas = overlayCanvasRef.current;
+      overlayCanvas.width = videoRef.current.videoWidth;
+      overlayCanvas.height = videoRef.current.videoHeight;
+      const ctx = overlayCanvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    }
+  }, [livePredictions, frozen]);
+
+  // Redraw frozen predictions on overlay canvas when frozen.
   useEffect(() => {
     if (frozen && frozenPredictions.length > 0 && overlayCanvasRef.current && videoRef.current) {
       const canvas = overlayCanvasRef.current;
@@ -112,18 +147,16 @@ const Webcam: React.FC = () => {
           ctx.strokeRect(x, y, width, height);
           ctx.fillStyle = 'red';
           ctx.font = '18px Arial';
-          ctx.fillText(
-            `${detection.class} (${(detection.score * 100).toFixed(1)}%)`,
-            x,
-            y > 20 ? y - 5 : y + 20
-          );
+          const labelText = showPredictionScore
+            ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
+            : detection.class;
+          ctx.fillText(labelText, x, y > 20 ? y - 5 : y + 20);
         });
       }
     }
-  }, [frozen, frozenPredictions]);
+  }, [frozen, frozenPredictions, showPredictionScore]);
 
-  // Toggle freeze/resume: if freezing, capture snapshot, pause video, clear interval, and run one prediction.
-  // When resuming, play video and restart predictions.
+  // Toggle freeze/resume: on freezing, always run one prediction regardless of livePredictions.
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
@@ -137,33 +170,56 @@ const Webcam: React.FC = () => {
         ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
         setSnapshot(tempCanvas.toDataURL());
       }
-      // Pause video and stop predictions.
+      // Pause video and clear prediction interval.
       video.pause();
       if (predictionIntervalRef.current) {
         clearInterval(predictionIntervalRef.current);
         predictionIntervalRef.current = null;
       }
-      // Run one prediction and update frozen predictions.
+      // Run one prediction (always) and update frozen predictions.
       const detections = await processPredictions();
       const sortedDetections = detections.sort((a, b) => b.score - a.score);
       setFrozenPredictions(sortedDetections);
       setFrozen(true);
     } else {
-      // Resume: play video and restart predictions.
+      // Resume: play video and restart predictions if livePredictions is enabled.
       video.play().catch((err: any) => console.error("Error resuming video:", err));
-      predictionIntervalRef.current = window.setInterval(processPredictions, 500);
+      if (livePredictions) {
+        predictionIntervalRef.current = window.setInterval(processPredictions, 500);
+      }
       setFrozen(false);
       setSnapshot(null);
       setFrozenPredictions([]);
     }
-  }, [frozen, processPredictions]);
+  }, [frozen, processPredictions, livePredictions]);
 
   return (
-    <Card style={{ maxWidth: 800, margin: '20px auto' }}>
+    <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
       <CardContent>
         <Typography variant="h5" gutterBottom>
           YOLO Inference with Rear Camera
         </Typography>
+        {/* Checkboxes above the video */}
+        <div style={{ marginBottom: 10 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={livePredictions}
+                onChange={(e) => setLivePredictions(e.target.checked)}
+              />
+            }
+            label="Live predictions"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={showPredictionScore}
+                onChange={(e) => setShowPredictionScore(e.target.checked)}
+              />
+            }
+            label="Show prediction score"
+          />
+        </div>
         <div style={{ position: 'relative', width: '100%' }}>
           {/* Always render the video element; its opacity is controlled by frozen state */}
           <video
@@ -203,6 +259,7 @@ const Webcam: React.FC = () => {
               borderRadius: 4,
               width: '100%',
               height: '100%',
+              backgroundColor: 'transparent',
             }}
           />
         </div>
@@ -213,12 +270,10 @@ const Webcam: React.FC = () => {
         {/* When frozen, display sorted predictions (only class name and score in black) */}
         {frozen && frozenPredictions.length > 0 && (
           <div style={{ marginTop: '10px' }}>
-            <Typography variant="h6" style={{ color: 'black' }}>
-              Detections:
-            </Typography>
+            <Typography variant="h6">Detections:</Typography>
             <ul>
               {frozenPredictions.map((pred, idx) => (
-                <li key={idx} style={{ color: 'black' }}>
+                <li key={idx}>
                   {pred.class}: {(pred.score * 100).toFixed(1)}%
                 </li>
               ))}
