@@ -8,7 +8,7 @@ import {
   Checkbox,
   Stack,
 } from '@mui/material';
-import { ModelConfig } from '../../ai/ModelConfig'
+import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
 interface Point {
@@ -17,10 +17,12 @@ interface Point {
 }
 
 interface WebcamProps {
-  modelConfig: ModelConfig
+  modelConfig: ModelConfig;
+  // New callback prop to return detections to the parent.
+  onDetections?: (detections: Prediction[]) => void;
 }
 
-const Webcam: React.FC<WebcamProps> = ({ modelConfig }) => {
+const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const predictionIntervalRef = useRef<number | null>(null);
@@ -68,7 +70,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig }) => {
     const overlayCanvas = overlayCanvasRef.current;
     if (!video || !overlayCanvas) return [];
     if (video.videoWidth === 0 || video.videoHeight === 0) return [];
-    
+
     const offscreenCanvas = document.createElement('canvas');
     offscreenCanvas.width = video.videoWidth;
     offscreenCanvas.height = video.videoHeight;
@@ -181,6 +183,13 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig }) => {
       }
     }
   }, [frozen, frozenPredictions, showPredictionScore, drawLabel]);
+
+  // Use an effect to call the parent's callback whenever detections change.
+  useEffect(() => {
+    if (onDetections) {
+      onDetections(frozenPredictions);
+    }
+  }, [frozenPredictions, onDetections]);
 
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;
@@ -397,18 +406,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig }) => {
             </>
           )}
         </Stack>
-        {frozen && frozenPredictions.length > 0 && (
-          <div style={{ marginTop: '10px' }}>
-            <Typography variant="h6">Detections:</Typography>
-            <ul>
-              {frozenPredictions.map((pred, idx) => (
-                <li key={idx}>
-                  {pred.class}: {(pred.score * 100).toFixed(1)}%
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
