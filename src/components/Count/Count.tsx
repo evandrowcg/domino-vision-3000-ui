@@ -7,7 +7,8 @@ interface CountProps {}
 
 const Count: FC<CountProps> = () => {
   // State variable to store the total sum of detection values.
-  const [total, setTotal] = useState<number>(0);
+  const [totalSum, setTotalSum] = useState<number>(0);
+  const [totalCount, setTotalCount] = useState<number>(0);
   // Ref to track the previous total sum, preventing unnecessary state updates.
   const prevTotalRef = useRef<number>(0);
 
@@ -36,8 +37,9 @@ const Count: FC<CountProps> = () => {
     // Update the state only if the new total differs from the previous total.
     if (newTotal !== prevTotalRef.current) {
       prevTotalRef.current = newTotal;
-      setTotal(newTotal);
+      setTotalSum(newTotal);
     }
+    setTotalCount(newDetections.length)
   }, []);
 
   return (
@@ -45,7 +47,9 @@ const Count: FC<CountProps> = () => {
       <h1>Count Component</h1>
       <Webcam modelConfig={DOMINO_YOLOV8s} onDetections={handleDetections} />
       <div style={{ marginTop: "20px" }}>
-        Total: {total}
+        Total Sum: {totalSum}
+        <br/>
+        Total Pieces: {totalCount}
       </div>
     </>
   );
