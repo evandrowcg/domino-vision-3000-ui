@@ -8,6 +8,7 @@ import {
   Checkbox,
   Stack,
 } from '@mui/material';
+import Box from '@mui/material/Box';
 import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
@@ -376,26 +377,28 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
             </div>
           )}
           {showClassSelection && (
-            <div
-              style={{
+            <Box
+              sx={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 backgroundColor: 'white',
-                padding: '10px',
-                borderRadius: '4px',
+                p: 2,
+                borderRadius: 1,
                 zIndex: 10,
+                width: { xs: '90vw', sm: '400px' },
               }}
             >
               <Typography variant="subtitle1">Select label:</Typography>
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', marginTop: 1 }}>
+              <Stack direction="row" sx={{ flexWrap: 'wrap', mt: 1 }}>
                 {modelConfig.modelClasses.map((cls, idx) => (
                   <Button
                     key={idx}
                     variant="outlined"
                     size="small"
                     onClick={() => handleClassSelection(cls)}
+                    sx={{ flex: '1 0 calc(20% - 6px)', margin: '3px' }}
                   >
                     {cls}
                   </Button>
@@ -412,7 +415,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               >
                 Cancel
               </Button>
-            </div>
+            </Box>
           )}
         </div>
         <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
