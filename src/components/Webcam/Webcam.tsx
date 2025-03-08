@@ -35,16 +35,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [livePredictions, setLivePredictions] = useState(true);
   const [showPredictionScore, setShowPredictionScore] = useState(false);
 
-  // State for manual box drawing when frozen.
-  const [manualBoxMode, setManualBoxMode] = useState(false);
-  const [manualBoxCoords, setManualBoxCoords] = useState<Point | null>(null);
-
-  // State for removal mode.
-  const [removeBoxMode, setRemoveBoxMode] = useState(false);
-
-  // State for edit mode.
-  const [editBoxMode, setEditBoxMode] = useState(false);
+  // Mode states.
+  const [manualBoxMode, setManualBoxMode] = useState(false); // Add mode
+  const [removeBoxMode, setRemoveBoxMode] = useState(false); // Remove mode
+  const [editBoxMode, setEditBoxMode] = useState(false); // Edit mode
   const [editBoxIndex, setEditBoxIndex] = useState<number | null>(null);
+
+  // State for temporary coordinates in add mode.
+  const [manualBoxCoords, setManualBoxCoords] = useState<Point | null>(null);
 
   // State for showing the class selection overlay.
   const [showClassSelection, setShowClassSelection] = useState(false);
@@ -52,7 +50,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   // New state for loading status.
   const [loading, setLoading] = useState(true);
 
-  // Memoize the model instance and include dependencies.
+  // Memoize the model instance.
   const yoloModel = useMemo(
     () => new YoloModelTF(modelConfig.modelUrl, modelConfig.modelClasses),
     [modelConfig.modelUrl, modelConfig.modelClasses]
@@ -192,7 +190,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, [frozen, frozenPredictions, showPredictionScore, drawLabel]);
 
-  // Use an effect to call the parent's callback whenever detections change.
+  // Call the parent's callback whenever detections change.
   useEffect(() => {
     if (onDetections) {
       onDetections(frozenPredictions);
@@ -262,7 +260,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         }
         return prev;
       });
-      setRemoveBoxMode(false);
+      // removeBoxMode remains active.
     } else if (editBoxMode) {
       const indexToEdit = frozenPredictions.findIndex((detection) => {
         const [x, y, width, height] = detection.bbox;
@@ -286,8 +284,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       };
       setFrozenPredictions((prev) => [...prev, newDetection]);
       setShowClassSelection(false);
-      setManualBoxMode(false);
       setManualBoxCoords(null);
+      // manualBoxMode remains active.
     } else if (editBoxMode && editBoxIndex !== null) {
       setFrozenPredictions((prev) => {
         const newPredictions = [...prev];
@@ -295,8 +293,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         return newPredictions;
       });
       setShowClassSelection(false);
-      setEditBoxMode(false);
       setEditBoxIndex(null);
+      // editBoxMode remains active.
     }
   }, [manualBoxMode, manualBoxCoords, editBoxMode, editBoxIndex]);
 
@@ -409,7 +407,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 size="small"
                 onClick={() => {
                   setShowClassSelection(false);
+                  // Cancel all modes.
                   setManualBoxMode(false);
+                  setRemoveBoxMode(false);
                   setEditBoxMode(false);
                 }}
               >
@@ -424,13 +424,52 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
           </Button>
           {frozen && (
             <>
-              <Button variant="contained" onClick={() => setManualBoxMode(true)}>
+              <Button
+                variant="contained"
+                color={manualBoxMode ? "success" : "primary"}
+                onClick={() => {
+                  // Toggle Add mode.
+                  if (manualBoxMode) {
+                    setManualBoxMode(false);
+                  } else {
+                    setManualBoxMode(true);
+                    setRemoveBoxMode(false);
+                    setEditBoxMode(false);
+                  }
+                }}
+              >
                 Add Box
               </Button>
-              <Button variant="contained" onClick={() => setRemoveBoxMode(true)}>
+              <Button
+                variant="contained"
+                color={removeBoxMode ? "error" : "primary"}
+                onClick={() => {
+                  // Toggle Remove mode.
+                  if (removeBoxMode) {
+                    setRemoveBoxMode(false);
+                  } else {
+                    setRemoveBoxMode(true);
+                    setManualBoxMode(false);
+                    setEditBoxMode(false);
+                  }
+                }}
+              >
                 Remove Box
               </Button>
-              <Button variant="contained" onClick={() => setEditBoxMode(true)}>
+              <Button
+                variant="contained"
+                color={editBoxMode ? "warning" : "primary"}
+                onClick={() => {
+                  // Toggle Edit mode.
+                  if (editBoxMode) {
+                    setEditBoxMode(false);
+                  } else {
+                    setEditBoxMode(true);
+                    setManualBoxMode(false);
+                    setRemoveBoxMode(false);
+                  }
+                }}
+              >
                 Edit Box
               </Button>
             </>
