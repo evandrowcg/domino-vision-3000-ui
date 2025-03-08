@@ -48,6 +48,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   // State for showing the class selection overlay.
   const [showClassSelection, setShowClassSelection] = useState(false);
 
+  // New state for loading status.
+  const [loading, setLoading] = useState(true);
+
   // Memoize the model instance and include dependencies.
   const yoloModel = useMemo(
     () => new YoloModelTF(modelConfig.modelUrl, modelConfig.modelClasses),
@@ -126,9 +129,13 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   }, []);
 
   useEffect(() => {
-    yoloModel.loadModel();
+    async function loadModel() {
+      await yoloModel.loadModel();
+      setLoading(false);
+    }
+    loadModel();
     startVideo();
-    // Capture the current video element to use in cleanup
+    // Cleanup on unmount.
     const video = videoRef.current;
     return () => {
       if (video && video.srcObject) {
@@ -269,12 +276,12 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
 
   const handleClassSelection = useCallback((selectedClass: string) => {
     if (manualBoxMode && manualBoxCoords) {
-      const defaultWidth = 100;
-      const defaultHeight = 100;
+      const defaultWidth = 50;
+      const defaultHeight = 50;
       const newDetection: Prediction = {
         class: selectedClass,
         score: 1.0,
-        bbox: [manualBoxCoords.x, manualBoxCoords.y, defaultWidth, defaultHeight],
+        bbox: [manualBoxCoords.x - defaultWidth / 2, manualBoxCoords.y - defaultHeight / 2, defaultWidth, defaultHeight],
       };
       setFrozenPredictions((prev) => [...prev, newDetection]);
       setShowClassSelection(false);
@@ -348,6 +355,26 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               backgroundColor: 'transparent',
             }}
           />
+          {loading && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                color: 'white',
+                fontSize: '24px',
+                zIndex: 30,
+              }}
+            >
+              Loading model...
+            </div>
+          )}
           {showClassSelection && (
             <div
               style={{
