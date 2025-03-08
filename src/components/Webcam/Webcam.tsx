@@ -56,17 +56,30 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     [modelConfig.modelUrl, modelConfig.modelClasses]
   );
 
-  // Helper function to draw a detection label.
+  // Helper function to draw a detection label with background.
+  // The background rectangle is drawn immediately above the box so that its bottom edge exactly
+  // touches the top of the bounding box.
   const drawLabel = useCallback(
     (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => {
-      ctx.font = '18px Arial';
-      ctx.fillStyle = 'red';
-      ctx.fillText(label, x, y > 20 ? y - 5 : y + 20);
+      const fontSize = 18;
+      const padding = 2;
+      ctx.font = `${fontSize}px Arial`;
+      ctx.textBaseline = "middle"; 
+      const textWidth = ctx.measureText(label).width;
+      const rectHeight = fontSize + 2 * padding;
+      // Draw background rectangle immediately above the box.
+      // Its bottom edge is exactly at y (the top of the box).
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(x - padding, y - rectHeight - 1, textWidth + padding * 2, rectHeight);
+      // Draw text centered vertically within the rectangle.
+      ctx.fillStyle = 'white';
+      ctx.fillText(label, x, y - rectHeight / 2);
     },
     []
   );
 
-  // Process predictions.
+  // Process predictions and draw boxes and labels.
+  // All boxes are drawn first, then all labels are drawn.
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
     const overlayCanvas = overlayCanvasRef.current;
@@ -87,11 +100,16 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const ctx = overlayCanvas.getContext('2d');
     if (ctx && !frozen && livePredictions) {
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      // Draw all bounding boxes first.
       detections.forEach((detection) => {
         const [x, y, width, height] = detection.bbox;
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, width, height);
+      });
+      // Then, draw all labels on top.
+      detections.forEach((detection) => {
+        const [x, y] = detection.bbox;
         const labelText = showPredictionScore
           ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
           : detection.class;
@@ -163,6 +181,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     };
   }, [livePredictions, frozen, processPredictions]);
 
+  // In frozen mode, draw boxes and then labels (boxes first, labels later).
   useEffect(() => {
     if (frozen && overlayCanvasRef.current && videoRef.current) {
       const canvas = overlayCanvasRef.current;
@@ -173,11 +192,16 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         canvas.height = video.videoHeight;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (frozenPredictions.length > 0) {
+          // Draw all boxes.
           frozenPredictions.forEach((detection) => {
             const [x, y, width, height] = detection.bbox;
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, width, height);
+          });
+          // Then draw all labels on top.
+          frozenPredictions.forEach((detection) => {
+            const [x, y] = detection.bbox;
             const labelText = showPredictionScore
               ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
               : detection.class;
