@@ -1,26 +1,33 @@
-import React, { FC, useState, useCallback, useRef, useEffect, useMemo } from "react";
+import React, {
+  FC,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import { Link } from "react-router-dom";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Webcam from "../Webcam/Webcam";
 import { DOMINO_YOLOV8s } from "../../ai/ModelConfig";
 import { Prediction } from "../../ai/YoloModelTF";
-import { combine } from "../../utils/tiles"; 
-import { 
-  Box, 
-  Typography, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  Table, 
-  TableHead, 
-  TableRow, 
-  TableCell, 
-  TableBody, 
+import { combine } from "../../utils/tiles";
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
   CardContent,
   Card,
   IconButton,
-  TableSortLabel
+  TableSortLabel,
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
 
@@ -107,7 +114,7 @@ const Solve: FC<SolveProps> = () => {
           Solve
         </Typography>
       </Box>
-      
+
       <Webcam modelConfig={DOMINO_YOLOV8s} onDetections={handleDetections} />
 
       <Card sx={{ maxWidth: 800, mx: "auto", mt: 1, color: "black" }}>
@@ -134,97 +141,131 @@ const Solve: FC<SolveProps> = () => {
             </FormControl>
           </Box>
 
-          {detectionPairs.length > 0 && composeResponse && composeResponse.length > 0 && (
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h5" gutterBottom sx={{ color: "black" }}>
-                Paths:
-              </Typography>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ color: "black" }}>
-                      <TableSortLabel
-                        active={sortBy === "sequenceLength"}
-                        direction={sortBy === "sequenceLength" ? sortDirection : "asc"}
-                        onClick={() => handleSort("sequenceLength")}
-                        sx={{
-                          color: "black",
-                          "& .MuiTableSortLabel-icon": { color: "black !important" },
-                          "&.Mui-active": { color: "black" }
-                        }}
-                      >
-                        Sequence Length
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ color: "black" }}>
-                      <TableSortLabel
-                        active={sortBy === "sequenceScore"}
-                        direction={sortBy === "sequenceScore" ? sortDirection : "asc"}
-                        onClick={() => handleSort("sequenceScore")}
-                        sx={{
-                          color: "black",
-                          "& .MuiTableSortLabel-icon": { color: "black !important" },
-                          "&.Mui-active": { color: "black" }
-                        }}
-                      >
-                        Sequence Score
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ color: "black" }}>
-                      <TableSortLabel
-                        active={sortBy === "unusedScore"}
-                        direction={sortBy === "unusedScore" ? sortDirection : "asc"}
-                        onClick={() => handleSort("unusedScore")}
-                        sx={{
-                          color: "black",
-                          "& .MuiTableSortLabel-icon": { color: "black !important" },
-                          "&.Mui-active": { color: "black" }
-                        }}
-                      >
-                        Unused Score
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ color: "black" }}>
-                      <TableSortLabel
-                        active={sortBy === "unused"}
-                        direction={sortBy === "unused" ? sortDirection : "asc"}
-                        onClick={() => handleSort("unused")}
-                        sx={{
-                          color: "black",
-                          "& .MuiTableSortLabel-icon": { color: "black !important" },
-                          "&.Mui-active": { color: "black" }
-                        }}
-                      >
-                        Unused Pieces
-                      </TableSortLabel>
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sortedComposeResponse.map((item, index) => {
-                    const rowBgColor = index % 2 === 0 ? 'grey.100' : 'grey.200';
-                    return (
-                      <React.Fragment key={index}>
-                        <TableRow sx={{ backgroundColor: rowBgColor }}>
-                          <TableCell sx={{ color: "black" }}>{item.sequenceLength}</TableCell>
-                          <TableCell sx={{ color: "black" }}>{item.sequenceScore}</TableCell>
-                          <TableCell sx={{ color: "black" }}>{item.unusedScore}</TableCell>
-                          <TableCell sx={{ color: "black" }}>{item.unused}</TableCell>
-                        </TableRow>
-                        <TableRow sx={{ backgroundColor: rowBgColor }}>
-                          <TableCell sx={{ color: "black" }} colSpan={4}>
-                            <Typography variant="body2" sx={{ fontStyle: "italic", color: "black" }}>
-                              {item.sequence}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      </React.Fragment>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Box>
-          )}
+          {detectionPairs.length > 0 &&
+            composeResponse &&
+            composeResponse.length > 0 && (
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h5" gutterBottom>
+                  Paths:
+                </Typography>
+                <Box sx={{ overflowX: "auto" }}>
+                  <Table sx={{ fontSize: "0.8rem" }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ color: "black" }}>
+                          <TableSortLabel
+                            active={sortBy === "sequenceLength"}
+                            direction={
+                              sortBy === "sequenceLength"
+                                ? sortDirection
+                                : "asc"
+                            }
+                            onClick={() => handleSort("sequenceLength")}
+                            sx={{
+                              color: "black",
+                              "& .MuiTableSortLabel-icon": {
+                                color: "black !important",
+                              },
+                              "&.Mui-active": { color: "black" },
+                            }}
+                          >
+                            Sequence Length
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ color: "black" }}>
+                          <TableSortLabel
+                            active={sortBy === "sequenceScore"}
+                            direction={
+                              sortBy === "sequenceScore" ? sortDirection : "asc"
+                            }
+                            onClick={() => handleSort("sequenceScore")}
+                            sx={{
+                              color: "black",
+                              "& .MuiTableSortLabel-icon": {
+                                color: "black !important",
+                              },
+                              "&.Mui-active": { color: "black" },
+                            }}
+                          >
+                            Sequence Score
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ color: "black" }}>
+                          <TableSortLabel
+                            active={sortBy === "unusedScore"}
+                            direction={
+                              sortBy === "unusedScore" ? sortDirection : "asc"
+                            }
+                            onClick={() => handleSort("unusedScore")}
+                            sx={{
+                              color: "black",
+                              "& .MuiTableSortLabel-icon": {
+                                color: "black !important",
+                              },
+                              "&.Mui-active": { color: "black" },
+                            }}
+                          >
+                            Unused Score
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ color: "black" }}>
+                          <TableSortLabel
+                            active={sortBy === "unused"}
+                            direction={
+                              sortBy === "unused" ? sortDirection : "asc"
+                            }
+                            onClick={() => handleSort("unused")}
+                            sx={{
+                              color: "black",
+                              "& .MuiTableSortLabel-icon": {
+                                color: "black !important",
+                              },
+                              "&.Mui-active": { color: "black" },
+                            }}
+                          >
+                            Unused Pieces
+                          </TableSortLabel>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sortedComposeResponse.map((item, index) => {
+                        const rowBgColor =
+                          index % 2 === 0 ? "grey.100" : "grey.200";
+                        return (
+                          <React.Fragment key={index}>
+                            <TableRow sx={{ backgroundColor: rowBgColor }}>
+                              <TableCell sx={{ color: "black" }}>
+                                {item.sequenceLength}
+                              </TableCell>
+                              <TableCell sx={{ color: "black" }}>
+                                {item.sequenceScore}
+                              </TableCell>
+                              <TableCell sx={{ color: "black" }}>
+                                {item.unusedScore}
+                              </TableCell>
+                              <TableCell sx={{ color: "black" }}>
+                                {item.unused}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow sx={{ backgroundColor: rowBgColor }}>
+                              <TableCell sx={{ color: "black" }} colSpan={4}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontStyle: "italic", color: "black" }}
+                                >
+                                  {item.sequence}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          </React.Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Box>
+              </Box>
+            )}
         </CardContent>
       </Card>
     </Box>
