@@ -6,7 +6,6 @@ import {
   Button,
   Stack,
   Checkbox,
-  FormControlLabel,
   MenuItem,
   Menu,
   IconButton,

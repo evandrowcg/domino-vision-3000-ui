@@ -1,4 +1,6 @@
 import React, { FC, useState, useCallback, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Webcam from "../Webcam/Webcam";
 import { DOMINO_YOLOV8s } from "../../ai/ModelConfig";
 import { Prediction } from "../../ai/YoloModelTF";
@@ -16,7 +18,8 @@ import {
   TableCell, 
   TableBody, 
   CardContent,
-  Card
+  Card,
+  IconButton
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
 
@@ -60,14 +63,34 @@ const Solve: FC<SolveProps> = () => {
   }, [detectionPairs, selectedValue]);
 
   return (
-    <Box sx={{ p: 2, color: "black" }}>
+    <Box sx={{ p: 1 }}>
+      <Box
+        sx={{
+          maxWidth: 800,
+          mx: "auto",
+          mt: 1,
+          mb: 0, // Removed bottom margin for tighter spacing
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <IconButton component={Link} to="/" sx={{ p: 0 }}>
+          <ArrowBackIcon sx={{ color: "white" }} />
+        </IconButton>
+        <Typography variant="h5" component="h1" sx={{ ml: 1 }}>
+          Solve
+        </Typography>
+      </Box>
+      
       <Webcam modelConfig={DOMINO_YOLOV8s} onDetections={handleDetections} />
 
-      <Card sx={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
+      <Card sx={{ maxWidth: 800, mx: "auto", mt: 1, color: "black" }}>
         <CardContent sx={{ color: "black" }}>
           <Box sx={{ mt: 2 }}>
             <FormControl sx={{ minWidth: 120 }}>
-              <InputLabel id="dropdown-label" sx={{ color: "black" }}>Starting value</InputLabel>
+              <InputLabel id="dropdown-label" sx={{ color: "black" }}>
+                Starting value
+              </InputLabel>
               <Select<number>
                 labelId="dropdown-label"
                 id="dropdown"
@@ -101,7 +124,6 @@ const Solve: FC<SolveProps> = () => {
                 </TableHead>
                 <TableBody>
                   {composeResponse.map((item, index) => {
-                    // Alternate background color for binary row coloring
                     const rowBgColor = index % 2 === 0 ? 'grey.100' : 'grey.200';
                     return (
                       <React.Fragment key={index}>

@@ -1,8 +1,10 @@
 import { FC, useState, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import Webcam from "../Webcam/Webcam";
 import { DOMINO_YOLOV8s } from "../../ai/ModelConfig";
 import { Prediction } from "../../ai/YoloModelTF";
-import { Box, Typography, Card, CardContent } from "@mui/material";
+import { Box, Typography, Card, CardContent, IconButton } from "@mui/material";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 interface CountProps {}
 
@@ -26,9 +28,26 @@ const Count: FC<CountProps> = () => {
   }, []);
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 1 }}>
+      <Box
+        sx={{
+          maxWidth: 800,
+          mx: "auto",
+          mt: 1,
+          mb: 0, // Removed bottom margin for tighter spacing
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <IconButton component={Link} to="/" sx={{ p: 0 }}>
+          <ArrowBackIcon sx={{ color: "white" }} />
+        </IconButton>
+        <Typography variant="h5" component="h1" sx={{ ml: 1 }}>
+          Count
+        </Typography>
+      </Box>
       <Webcam modelConfig={DOMINO_YOLOV8s} onDetections={handleDetections} />
-      <Card sx={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
+      <Card sx={{ maxWidth: 800, mx: "auto", mt: 1, color: "black" }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
             Total Sum: {totalSum}
