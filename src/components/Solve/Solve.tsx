@@ -214,7 +214,7 @@ const Solve: FC<SolveProps> = () => {
                         <TableRow sx={{ backgroundColor: rowBgColor }}>
                           <TableCell sx={{ color: "black" }} colSpan={4}>
                             <Typography variant="body2" sx={{ fontStyle: "italic", color: "black" }}>
-                              Sequence: {item.sequence}
+                              {item.sequence}
                             </Typography>
                           </TableCell>
                         </TableRow>
