@@ -9,6 +9,10 @@ import {
   Stack,
 } from '@mui/material';
 import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
@@ -19,7 +23,7 @@ interface Point {
 
 interface WebcamProps {
   modelConfig: ModelConfig;
-  // New callback prop to return detections to the parent.
+  // Callback prop to return detections to the parent.
   onDetections?: (detections: Prediction[]) => void;
 }
 
@@ -28,27 +32,25 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const predictionIntervalRef = useRef<number | null>(null);
 
-  // State for freeze/resume and checkbox settings.
+  // State variables.
   const [frozen, setFrozen] = useState(false);
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [frozenPredictions, setFrozenPredictions] = useState<Prediction[]>([]);
   const [livePredictions, setLivePredictions] = useState(true);
   const [showPredictionScore, setShowPredictionScore] = useState(false);
 
-  // Mode states.
-  const [manualBoxMode, setManualBoxMode] = useState(false); // Add mode
-  const [removeBoxMode, setRemoveBoxMode] = useState(false); // Remove mode
-  const [editBoxMode, setEditBoxMode] = useState(false); // Edit mode
+  const [manualBoxMode, setManualBoxMode] = useState(false);
+  const [removeBoxMode, setRemoveBoxMode] = useState(false);
+  const [editBoxMode, setEditBoxMode] = useState(false);
   const [editBoxIndex, setEditBoxIndex] = useState<number | null>(null);
 
-  // State for temporary coordinates in add mode.
   const [manualBoxCoords, setManualBoxCoords] = useState<Point | null>(null);
-
-  // State for showing the class selection overlay.
   const [showClassSelection, setShowClassSelection] = useState(false);
-
-  // New state for loading status.
   const [loading, setLoading] = useState(true);
+
+  // New states for dropdown values.
+  const [selectedStart, setSelectedStart] = useState(0);
+  const [selectedEnd, setSelectedEnd] = useState(0);
 
   // Memoize the model instance.
   const yoloModel = useMemo(
@@ -56,30 +58,25 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     [modelConfig.modelUrl, modelConfig.modelClasses]
   );
 
-  // Helper function to draw a detection label with background.
-  // The background rectangle is drawn immediately above the box so that its bottom edge exactly
-  // touches the top of the bounding box.
+  // Helper function to draw a label with background.
   const drawLabel = useCallback(
     (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => {
       const fontSize = 18;
       const padding = 2;
       ctx.font = `${fontSize}px Arial`;
-      ctx.textBaseline = "middle"; 
+      ctx.textBaseline = "middle";
       const textWidth = ctx.measureText(label).width;
       const rectHeight = fontSize + 2 * padding;
-      // Draw background rectangle immediately above the box.
-      // Its bottom edge is exactly at y (the top of the box).
+      // Draw a semi-transparent background rectangle immediately above the bounding box.
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(x - padding, y - rectHeight - 1, textWidth + padding * 2, rectHeight);
-      // Draw text centered vertically within the rectangle.
       ctx.fillStyle = 'white';
       ctx.fillText(label, x, y - rectHeight / 2);
     },
     []
   );
 
-  // Process predictions and draw boxes and labels.
-  // All boxes are drawn first, then all labels are drawn.
+  // Process predictions: capture frame, run model, and draw bounding boxes/labels.
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
     const overlayCanvas = overlayCanvasRef.current;
@@ -100,14 +97,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const ctx = overlayCanvas.getContext('2d');
     if (ctx && !frozen && livePredictions) {
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      // Draw all bounding boxes first.
+      // Draw all bounding boxes.
       detections.forEach((detection) => {
         const [x, y, width, height] = detection.bbox;
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, width, height);
       });
-      // Then, draw all labels on top.
+      // Then, draw labels.
       detections.forEach((detection) => {
         const [x, y] = detection.bbox;
         const labelText = showPredictionScore
@@ -117,8 +114,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
     }
     return detections;
-  }, [yoloModel, showPredictionScore, frozen, livePredictions, drawLabel]);
+  }, [yoloModel, frozen, livePredictions, showPredictionScore, drawLabel]);
 
+  // Start the webcam video.
   const startVideo = useCallback(async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
@@ -145,6 +143,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, []);
 
+  // Load the model and start video on mount.
   useEffect(() => {
     async function loadModel() {
       await yoloModel.loadModel();
@@ -152,7 +151,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
     loadModel();
     startVideo();
-    // Cleanup on unmount.
+    // Copy the current video element to a variable for cleanup.
     const video = videoRef.current;
     return () => {
       if (video && video.srcObject) {
@@ -162,6 +161,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     };
   }, [yoloModel, startVideo]);
 
+  // Set interval for predictions.
   useEffect(() => {
     if (predictionIntervalRef.current) {
       clearInterval(predictionIntervalRef.current);
@@ -181,7 +181,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     };
   }, [livePredictions, frozen, processPredictions]);
 
-  // In frozen mode, draw boxes and then labels (boxes first, labels later).
+  // In frozen mode, draw predictions on the overlay canvas.
   useEffect(() => {
     if (frozen && overlayCanvasRef.current && videoRef.current) {
       const canvas = overlayCanvasRef.current;
@@ -192,14 +192,12 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         canvas.height = video.videoHeight;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (frozenPredictions.length > 0) {
-          // Draw all boxes.
           frozenPredictions.forEach((detection) => {
             const [x, y, width, height] = detection.bbox;
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, width, height);
           });
-          // Then draw all labels on top.
           frozenPredictions.forEach((detection) => {
             const [x, y] = detection.bbox;
             const labelText = showPredictionScore
@@ -214,13 +212,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, [frozen, frozenPredictions, showPredictionScore, drawLabel]);
 
-  // Call the parent's callback whenever detections change.
+  // Pass detections to the parent component.
   useEffect(() => {
     if (onDetections) {
       onDetections(frozenPredictions);
     }
   }, [frozenPredictions, onDetections]);
 
+  // Toggle freeze/resume.
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
@@ -259,6 +258,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, [frozen, processPredictions, livePredictions]);
 
+  // Handle clicks on the canvas.
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!frozen) return;
     const canvas = overlayCanvasRef.current;
@@ -269,6 +269,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
     if (manualBoxMode) {
+      // When adding a new box, always reset dropdowns to 0 and 0.
+      setSelectedStart(0);
+      setSelectedEnd(0);
       setManualBoxCoords({ x: clickX, y: clickY });
       setShowClassSelection(true);
     } else if (removeBoxMode) {
@@ -284,19 +287,32 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         }
         return prev;
       });
-      // removeBoxMode remains active.
     } else if (editBoxMode) {
       const indexToEdit = frozenPredictions.findIndex((detection) => {
         const [x, y, width, height] = detection.bbox;
         return clickX >= x && clickX <= x + width && clickY >= y && clickY <= y + height;
       });
       if (indexToEdit >= 0) {
+        const detection = frozenPredictions[indexToEdit];
+        // Parse the class string assuming the format "numberxnumber"
+        if (detection.class && detection.class.includes('x')) {
+          const parts = detection.class.split('x');
+          if (parts.length === 2) {
+            setSelectedStart(Number(parts[0]));
+            setSelectedEnd(Number(parts[1]));
+          }
+        } else {
+          // Fallback to defaults if parsing fails.
+          setSelectedStart(0);
+          setSelectedEnd(0);
+        }
         setEditBoxIndex(indexToEdit);
         setShowClassSelection(true);
       }
     }
   }, [frozen, manualBoxMode, removeBoxMode, editBoxMode, frozenPredictions]);
 
+  // Handle class selection (either adding a new detection or editing an existing one).
   const handleClassSelection = useCallback((selectedClass: string) => {
     if (manualBoxMode && manualBoxCoords) {
       const defaultWidth = 50;
@@ -304,12 +320,16 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const newDetection: Prediction = {
         class: selectedClass,
         score: 1.0,
-        bbox: [manualBoxCoords.x - defaultWidth / 2, manualBoxCoords.y - defaultHeight / 2, defaultWidth, defaultHeight],
+        bbox: [
+          manualBoxCoords.x - defaultWidth / 2,
+          manualBoxCoords.y - defaultHeight / 2,
+          defaultWidth,
+          defaultHeight,
+        ],
       };
       setFrozenPredictions((prev) => [...prev, newDetection]);
       setShowClassSelection(false);
       setManualBoxCoords(null);
-      // manualBoxMode remains active.
     } else if (editBoxMode && editBoxIndex !== null) {
       setFrozenPredictions((prev) => {
         const newPredictions = [...prev];
@@ -318,16 +338,12 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
       setShowClassSelection(false);
       setEditBoxIndex(null);
-      // editBoxMode remains active.
     }
   }, [manualBoxMode, manualBoxCoords, editBoxMode, editBoxIndex]);
 
   return (
     <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
       <CardContent>
-        <Typography variant="h5" gutterBottom>
-          YOLO Inference with Rear Camera
-        </Typography>
         <div style={{ marginBottom: 10 }}>
           <FormControlLabel
             control={<Checkbox checked={livePredictions} onChange={(e) => setLivePredictions(e.target.checked)} />}
@@ -412,33 +428,74 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 width: { xs: '90vw', sm: '400px' },
               }}
             >
-              <Typography variant="subtitle1">Select label:</Typography>
-              <Stack direction="row" sx={{ flexWrap: 'wrap', mt: 1 }}>
-                {modelConfig.modelClasses.map((cls, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleClassSelection(cls)}
-                    sx={{ flex: '1 0 calc(20% - 6px)', margin: '3px' }}
+              <Typography variant="subtitle1">Domino:</Typography>
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 1 }}>
+                <FormControl sx={{ minWidth: 100 }}>
+                  <InputLabel id="start-label" sx={{ color: 'black' }}>
+                    Start
+                  </InputLabel>
+                  <Select
+                    labelId="start-label"
+                    value={selectedStart}
+                    label="Start"
+                    onChange={(e) => setSelectedStart(Number(e.target.value))}
+                    sx={{
+                      color: 'black',
+                      '.MuiSvgIcon-root': { color: 'black' },
+                    }}
                   >
-                    {cls}
-                  </Button>
-                ))}
+                    {Array.from({ length: 13 }, (_, i) => (
+                      <MenuItem key={i} value={i} sx={{ color: 'black' }}>
+                        {i}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl sx={{ minWidth: 100 }}>
+                  <InputLabel id="end-label" sx={{ color: 'black' }}>
+                    End
+                  </InputLabel>
+                  <Select
+                    labelId="end-label"
+                    value={selectedEnd}
+                    label="End"
+                    onChange={(e) => setSelectedEnd(Number(e.target.value))}
+                    sx={{
+                      color: 'black',
+                      '.MuiSvgIcon-root': { color: 'black' },
+                    }}
+                  >
+                    {Array.from({ length: 13 }, (_, i) => (
+                      <MenuItem key={i} value={i} sx={{ color: 'black' }}>
+                        {i}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Stack>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => {
-                  setShowClassSelection(false);
-                  // Cancel all modes.
-                  setManualBoxMode(false);
-                  setRemoveBoxMode(false);
-                  setEditBoxMode(false);
-                }}
-              >
-                Cancel
-              </Button>
+              <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    const minVal = Math.min(selectedStart, selectedEnd);
+                    const maxVal = Math.max(selectedStart, selectedEnd);
+                    const generatedClass = `${minVal}x${maxVal}`;
+                    handleClassSelection(generatedClass);
+                  }}
+                >
+                  Confirm
+                </Button>
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={() => {
+                    // Simply hide the modal; do not disable the current add or edit mode.
+                    setShowClassSelection(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Stack>
             </Box>
           )}
         </div>
@@ -452,14 +509,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 variant="contained"
                 color={manualBoxMode ? "success" : "primary"}
                 onClick={() => {
-                  // Toggle Add mode.
-                  if (manualBoxMode) {
-                    setManualBoxMode(false);
-                  } else {
-                    setManualBoxMode(true);
-                    setRemoveBoxMode(false);
-                    setEditBoxMode(false);
+                  // When entering Add mode, reset dropdowns to 0 and 0.
+                  if (!manualBoxMode) {
+                    setSelectedStart(0);
+                    setSelectedEnd(0);
                   }
+                  setManualBoxMode(!manualBoxMode);
+                  setRemoveBoxMode(false);
+                  setEditBoxMode(false);
                 }}
               >
                 Add Box
@@ -468,14 +525,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 variant="contained"
                 color={removeBoxMode ? "error" : "primary"}
                 onClick={() => {
-                  // Toggle Remove mode.
-                  if (removeBoxMode) {
-                    setRemoveBoxMode(false);
-                  } else {
-                    setRemoveBoxMode(true);
-                    setManualBoxMode(false);
-                    setEditBoxMode(false);
-                  }
+                  setRemoveBoxMode(!removeBoxMode);
+                  setManualBoxMode(false);
+                  setEditBoxMode(false);
                 }}
               >
                 Remove Box
@@ -484,14 +536,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 variant="contained"
                 color={editBoxMode ? "warning" : "primary"}
                 onClick={() => {
-                  // Toggle Edit mode.
-                  if (editBoxMode) {
-                    setEditBoxMode(false);
-                  } else {
-                    setEditBoxMode(true);
-                    setManualBoxMode(false);
-                    setRemoveBoxMode(false);
-                  }
+                  setEditBoxMode(!editBoxMode);
+                  setManualBoxMode(false);
+                  setRemoveBoxMode(false);
                 }}
               >
                 Edit Box
