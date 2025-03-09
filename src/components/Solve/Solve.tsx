@@ -32,9 +32,9 @@ const Solve: FC<SolveProps> = () => {
   const [selectedValue, setSelectedValue] = useState<number>(0);
   const prevPairsRef = useRef<number[][]>([]);
 
-  // New state for sorting
+  // Set default sort: "sequenceLength" descending by default.
   const [sortBy, setSortBy] = useState<string>("sequenceLength");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const handleDetections = useCallback((newDetections: Prediction[]) => {
     const pairs: number[][] = newDetections.map((det) => {
@@ -55,7 +55,7 @@ const Solve: FC<SolveProps> = () => {
     setSelectedValue(Number(event.target.value));
   };
 
-  // Function to handle sorting when a header is clicked
+  // Toggle sorting when a header is clicked.
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -65,7 +65,7 @@ const Solve: FC<SolveProps> = () => {
     }
   };
 
-  // Compute sorted response using useMemo to avoid unnecessary sorting
+  // Memoize sorted response.
   const sortedComposeResponse = useMemo(() => {
     return composeResponse.slice().sort((a, b) => {
       const aVal = a[sortBy];
@@ -142,31 +142,62 @@ const Solve: FC<SolveProps> = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    {[
-                      { id: "sequenceLength", label: "Sequence Length" },
-                      { id: "sequenceScore", label: "Sequence Score" },
-                      { id: "unusedScore", label: "Unused Score" },
-                      { id: "unused", label: "Unused Pieces" },
-                    ].map((col) => (
-                      <TableCell key={col.id} sx={{ color: "black", pr: 0 }}>
-                        <TableSortLabel
-                          active={sortBy === col.id}
-                          direction={sortBy === col.id ? sortDirection : "asc"}
-                          onClick={() => handleSort(col.id)}
-                          sx={{
-                            color: "black",
-                            pr: 0,
-                            "& .MuiTableSortLabel-icon": { 
-                              color: "black !important", 
-                              marginLeft: 0 
-                            },
-                            "&.Mui-active": { color: "black" }
-                          }}
-                        >
-                          {col.label}
-                        </TableSortLabel>
-                      </TableCell>
-                    ))}
+                    <TableCell sx={{ color: "black" }}>
+                      <TableSortLabel
+                        active={sortBy === "sequenceLength"}
+                        direction={sortBy === "sequenceLength" ? sortDirection : "asc"}
+                        onClick={() => handleSort("sequenceLength")}
+                        sx={{
+                          color: "black",
+                          "& .MuiTableSortLabel-icon": { color: "black !important" },
+                          "&.Mui-active": { color: "black" }
+                        }}
+                      >
+                        Sequence Length
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ color: "black" }}>
+                      <TableSortLabel
+                        active={sortBy === "sequenceScore"}
+                        direction={sortBy === "sequenceScore" ? sortDirection : "asc"}
+                        onClick={() => handleSort("sequenceScore")}
+                        sx={{
+                          color: "black",
+                          "& .MuiTableSortLabel-icon": { color: "black !important" },
+                          "&.Mui-active": { color: "black" }
+                        }}
+                      >
+                        Sequence Score
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ color: "black" }}>
+                      <TableSortLabel
+                        active={sortBy === "unusedScore"}
+                        direction={sortBy === "unusedScore" ? sortDirection : "asc"}
+                        onClick={() => handleSort("unusedScore")}
+                        sx={{
+                          color: "black",
+                          "& .MuiTableSortLabel-icon": { color: "black !important" },
+                          "&.Mui-active": { color: "black" }
+                        }}
+                      >
+                        Unused Score
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ color: "black" }}>
+                      <TableSortLabel
+                        active={sortBy === "unused"}
+                        direction={sortBy === "unused" ? sortDirection : "asc"}
+                        onClick={() => handleSort("unused")}
+                        sx={{
+                          color: "black",
+                          "& .MuiTableSortLabel-icon": { color: "black !important" },
+                          "&.Mui-active": { color: "black" }
+                        }}
+                      >
+                        Unused Pieces
+                      </TableSortLabel>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

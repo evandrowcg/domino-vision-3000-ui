@@ -35,7 +35,7 @@ const Home = () => {
       <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
         Welcome to
       </Typography>
-      <Typography variant="h3" fontWeight="bold" sx={{ mb: 4 }}>
+      <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
         Domino Vision 3000!
       </Typography>
       <Button
