@@ -4,17 +4,22 @@ import {
   CardContent,
   Typography,
   Button,
-  Stack,
   Checkbox,
   MenuItem,
   Menu,
   IconButton,
+  Tooltip,
 } from '@mui/material';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
@@ -72,7 +77,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       ctx.textBaseline = 'middle';
       const textWidth = ctx.measureText(label).width;
       const rectHeight = fontSize + 2 * padding;
-      // Draw a semi-transparent background rectangle immediately above the bounding box.
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(x - padding, y - rectHeight - 1, textWidth + padding * 2, rectHeight);
       ctx.fillStyle = 'white';
@@ -102,14 +106,12 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const ctx = overlayCanvas.getContext('2d');
     if (ctx && !frozen && livePredictions) {
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      // Draw all bounding boxes.
       detections.forEach((detection) => {
         const [x, y, width, height] = detection.bbox;
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, width, height);
       });
-      // Then, draw labels.
       detections.forEach((detection) => {
         const [x, y] = detection.bbox;
         const labelText = showPredictionScore
@@ -156,7 +158,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
     loadModel();
     startVideo();
-    // Cleanup video stream on unmount.
     const video = videoRef.current;
     return () => {
       if (video && video.srcObject) {
@@ -387,7 +388,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               backgroundColor: 'transparent',
             }}
           />
-          {/* Three-dot menu button (text/icon color set to black) */}
+          {/* Three-dot menu button */}
           <IconButton
             style={{ position: 'absolute', top: 8, right: 8, color: 'black', zIndex: 31 }}
             onClick={(event) => setMenuAnchorEl(event.currentTarget)}
@@ -458,7 +459,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               <Typography variant="subtitle1" style={{ color: 'black' }}>
                 Domino:
               </Typography>
-              <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
                 <FormControl sx={{ minWidth: 100 }}>
                   <InputLabel id="start-label" sx={{ color: 'black' }}>
                     Start
@@ -501,8 +502,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                     ))}
                   </Select>
                 </FormControl>
-              </Stack>
-              <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mt: 2 }}>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
                 <Button
                   variant="contained"
                   onClick={() => {
@@ -523,56 +524,73 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 >
                   Cancel
                 </Button>
-              </Stack>
+              </Box>
             </Box>
           )}
         </div>
-        <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
-          <Button variant="contained" onClick={toggleFreeze}>
-            {frozen ? 'Resume' : 'Freeze'}
-          </Button>
+        {/* Container for camera button (centered) and extra icons (positioned to the right edge) */}
+        <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
+          <Box sx={{ textAlign: 'center' }}>
+            <Tooltip title={frozen ? 'Resume' : 'Freeze'}>
+              <IconButton onClick={toggleFreeze} color="primary">
+                {frozen ? <ArrowBackIcon /> : <CameraAltIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
           {frozen && (
-            <>
-              <Button
-                variant="contained"
-                color={manualBoxMode ? 'success' : 'primary'}
-                onClick={() => {
-                  if (!manualBoxMode) {
-                    setSelectedStart(0);
-                    setSelectedEnd(0);
-                  }
-                  setManualBoxMode(!manualBoxMode);
-                  setRemoveBoxMode(false);
-                  setEditBoxMode(false);
-                }}
-              >
-                Add Box
-              </Button>
-              <Button
-                variant="contained"
-                color={removeBoxMode ? 'error' : 'primary'}
-                onClick={() => {
-                  setRemoveBoxMode(!removeBoxMode);
-                  setManualBoxMode(false);
-                  setEditBoxMode(false);
-                }}
-              >
-                Remove Box
-              </Button>
-              <Button
-                variant="contained"
-                color={editBoxMode ? 'warning' : 'primary'}
-                onClick={() => {
-                  setEditBoxMode(!editBoxMode);
-                  setManualBoxMode(false);
-                  setRemoveBoxMode(false);
-                }}
-              >
-                Edit Box
-              </Button>
-            </>
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                right: 8,
+                transform: 'translateY(-50%)',
+                display: 'flex',
+                gap: 1,
+              }}
+            >
+              <Tooltip title="Add Box">
+                <IconButton
+                  color={manualBoxMode ? 'success' : 'primary'}
+                  onClick={() => {
+                    if (!manualBoxMode) {
+                      setSelectedStart(0);
+                      setSelectedEnd(0);
+                    }
+                    setManualBoxMode(!manualBoxMode);
+                    setRemoveBoxMode(false);
+                    setEditBoxMode(false);
+                  }}
+                >
+                  <AddCircleOutlineIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Remove Box">
+                <IconButton
+                  color={removeBoxMode ? 'error' : 'primary'}
+                  onClick={() => {
+                    setRemoveBoxMode(!removeBoxMode);
+                    setManualBoxMode(false);
+                    setEditBoxMode(false);
+                  }}
+                >
+                  <RemoveCircleOutlineIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Edit Box">
+                <IconButton
+                  color={editBoxMode ? 'warning' : 'primary'}
+                  onClick={() => {
+                    setEditBoxMode(!editBoxMode);
+                    setManualBoxMode(false);
+                    setRemoveBoxMode(false);
+                  }}
+                >
+                  <EditIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
           )}
-        </Stack>
+        </Box>
       </CardContent>
     </Card>
   );
