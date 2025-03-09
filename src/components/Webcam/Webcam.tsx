@@ -4,15 +4,18 @@ import {
   CardContent,
   Typography,
   Button,
-  FormControlLabel,
-  Checkbox,
   Stack,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Menu,
+  IconButton,
 } from '@mui/material';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
@@ -52,6 +55,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [selectedStart, setSelectedStart] = useState(0);
   const [selectedEnd, setSelectedEnd] = useState(0);
 
+  // New state for the 3-dot menu anchor.
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+
   // Memoize the model instance.
   const yoloModel = useMemo(
     () => new YoloModelTF(modelConfig.modelUrl, modelConfig.modelClasses),
@@ -64,7 +70,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const fontSize = 18;
       const padding = 2;
       ctx.font = `${fontSize}px Arial`;
-      ctx.textBaseline = "middle";
+      ctx.textBaseline = 'middle';
       const textWidth = ctx.measureText(label).width;
       const rectHeight = fontSize + 2 * padding;
       // Draw a semi-transparent background rectangle immediately above the bounding box.
@@ -129,9 +135,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
             await videoRef.current.play();
           } catch (err: any) {
             if (err.name === 'AbortError') {
-              console.warn("Video play aborted:", err);
+              console.warn('Video play aborted:', err);
             } else {
-              console.error("Error playing video:", err);
+              console.error('Error playing video:', err);
             }
           }
         }
@@ -151,7 +157,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
     loadModel();
     startVideo();
-    // Copy the current video element to a variable for cleanup.
+    // Cleanup video stream on unmount.
     const video = videoRef.current;
     return () => {
       if (video && video.srcObject) {
@@ -242,7 +248,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       setFrozenPredictions(sortedDetections);
       setFrozen(true);
     } else {
-      video.play().catch((err: any) => console.error("Error resuming video:", err));
+      video.play().catch((err: any) => console.error('Error resuming video:', err));
       if (livePredictions) {
         predictionIntervalRef.current = window.setInterval(processPredictions, 500);
       }
@@ -269,7 +275,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
     if (manualBoxMode) {
-      // When adding a new box, always reset dropdowns to 0 and 0.
       setSelectedStart(0);
       setSelectedEnd(0);
       setManualBoxCoords({ x: clickX, y: clickY });
@@ -294,7 +299,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
       if (indexToEdit >= 0) {
         const detection = frozenPredictions[indexToEdit];
-        // Parse the class string assuming the format "numberxnumber"
         if (detection.class && detection.class.includes('x')) {
           const parts = detection.class.split('x');
           if (parts.length === 2) {
@@ -302,7 +306,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
             setSelectedEnd(Number(parts[1]));
           }
         } else {
-          // Fallback to defaults if parsing fails.
           setSelectedStart(0);
           setSelectedEnd(0);
         }
@@ -312,7 +315,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, [frozen, manualBoxMode, removeBoxMode, editBoxMode, frozenPredictions]);
 
-  // Handle class selection (either adding a new detection or editing an existing one).
+  // Handle class selection (adding or editing a detection).
   const handleClassSelection = useCallback((selectedClass: string) => {
     if (manualBoxMode && manualBoxCoords) {
       const defaultWidth = 50;
@@ -344,16 +347,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   return (
     <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
       <CardContent>
-        <div style={{ marginBottom: 10 }}>
-          <FormControlLabel
-            control={<Checkbox checked={livePredictions} onChange={(e) => setLivePredictions(e.target.checked)} />}
-            label="Live predictions"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={showPredictionScore} onChange={(e) => setShowPredictionScore(e.target.checked)} />}
-            label="Show prediction score"
-          />
-        </div>
+        {/* Video container */}
         <div style={{ position: 'relative', width: '100%' }}>
           <video
             ref={videoRef}
@@ -394,6 +388,41 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               backgroundColor: 'transparent',
             }}
           />
+          {/* Three-dot menu button (text/icon color set to black) */}
+          <IconButton
+            style={{ position: 'absolute', top: 8, right: 8, color: 'black', zIndex: 31 }}
+            onClick={(event) => setMenuAnchorEl(event.currentTarget)}
+          >
+            <MoreVertIcon />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={Boolean(menuAnchorEl)}
+            onClose={() => setMenuAnchorEl(null)}
+          >
+            <MenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setLivePredictions(!livePredictions);
+              }}
+            >
+              <Checkbox checked={livePredictions} />
+              <Typography variant="inherit" style={{ color: 'black' }}>
+                Live predictions
+              </Typography>
+            </MenuItem>
+            <MenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPredictionScore(!showPredictionScore);
+              }}
+            >
+              <Checkbox checked={showPredictionScore} />
+              <Typography variant="inherit" style={{ color: 'black' }}>
+                Show prediction score
+              </Typography>
+            </MenuItem>
+          </Menu>
           {loading && (
             <div
               style={{
@@ -406,7 +435,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                color: 'white',
                 fontSize: '24px',
                 zIndex: 30,
               }}
@@ -428,7 +456,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 width: { xs: '90vw', sm: '400px' },
               }}
             >
-              <Typography variant="subtitle1">Domino:</Typography>
+              <Typography variant="subtitle1" style={{ color: 'black' }}>
+                Domino:
+              </Typography>
               <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 1 }}>
                 <FormControl sx={{ minWidth: 100 }}>
                   <InputLabel id="start-label" sx={{ color: 'black' }}>
@@ -489,7 +519,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   variant="text"
                   size="small"
                   onClick={() => {
-                    // Simply hide the modal; do not disable the current add or edit mode.
                     setShowClassSelection(false);
                   }}
                 >
@@ -501,15 +530,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         </div>
         <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
           <Button variant="contained" onClick={toggleFreeze}>
-            {frozen ? "Resume" : "Freeze"}
+            {frozen ? 'Resume' : 'Freeze'}
           </Button>
           {frozen && (
             <>
               <Button
                 variant="contained"
-                color={manualBoxMode ? "success" : "primary"}
+                color={manualBoxMode ? 'success' : 'primary'}
                 onClick={() => {
-                  // When entering Add mode, reset dropdowns to 0 and 0.
                   if (!manualBoxMode) {
                     setSelectedStart(0);
                     setSelectedEnd(0);
@@ -523,7 +551,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               </Button>
               <Button
                 variant="contained"
-                color={removeBoxMode ? "error" : "primary"}
+                color={removeBoxMode ? 'error' : 'primary'}
                 onClick={() => {
                   setRemoveBoxMode(!removeBoxMode);
                   setManualBoxMode(false);
@@ -534,7 +562,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               </Button>
               <Button
                 variant="contained"
-                color={editBoxMode ? "warning" : "primary"}
+                color={editBoxMode ? 'warning' : 'primary'}
                 onClick={() => {
                   setEditBoxMode(!editBoxMode);
                   setManualBoxMode(false);

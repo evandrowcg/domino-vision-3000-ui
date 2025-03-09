@@ -2,7 +2,7 @@ import React, { FC, useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "../Webcam/Webcam";
 import { DOMINO_YOLOV8s } from "../../ai/ModelConfig";
 import { Prediction } from "../../ai/YoloModelTF";
-import { combine } from "../../utils/tiles"; 
+import { combine } from "../../utils/Tiles"; 
 import { 
   Box, 
   Typography, 
