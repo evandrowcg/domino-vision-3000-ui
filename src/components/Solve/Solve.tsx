@@ -4,7 +4,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Webcam from "../Webcam/Webcam";
 import { DOMINO_YOLOV8s } from "../../ai/ModelConfig";
 import { Prediction } from "../../ai/YoloModelTF";
-import { combine } from "../../utils/Tiles"; 
+import { combine } from "../../utils/tiles"; 
 import { 
   Box, 
   Typography, 

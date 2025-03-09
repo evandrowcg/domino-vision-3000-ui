@@ -1,4 +1,4 @@
-import { combine } from '../../utils/Tiles';
+import { combine } from '../../utils/tiles';
 
 describe('combine function', () => {
   test('should return the best sequence for simple tiles', () => {
