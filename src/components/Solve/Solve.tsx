@@ -1,4 +1,4 @@
-import React, { FC, useState, useCallback, useRef, useEffect } from "react";
+import React, { FC, useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Webcam from "../Webcam/Webcam";
@@ -19,7 +19,8 @@ import {
   TableBody, 
   CardContent,
   Card,
-  IconButton
+  IconButton,
+  TableSortLabel
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
 
@@ -30,6 +31,10 @@ const Solve: FC<SolveProps> = () => {
   const [composeResponse, setComposeResponse] = useState<any[]>([]);
   const [selectedValue, setSelectedValue] = useState<number>(0);
   const prevPairsRef = useRef<number[][]>([]);
+
+  // New state for sorting
+  const [sortBy, setSortBy] = useState<string>("sequenceLength");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const handleDetections = useCallback((newDetections: Prediction[]) => {
     const pairs: number[][] = newDetections.map((det) => {
@@ -50,6 +55,27 @@ const Solve: FC<SolveProps> = () => {
     setSelectedValue(Number(event.target.value));
   };
 
+  // Function to handle sorting when a header is clicked
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("asc");
+    }
+  };
+
+  // Compute sorted response using useMemo to avoid unnecessary sorting
+  const sortedComposeResponse = useMemo(() => {
+    return composeResponse.slice().sort((a, b) => {
+      const aVal = a[sortBy];
+      const bVal = b[sortBy];
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [composeResponse, sortBy, sortDirection]);
+
   useEffect(() => {
     async function updateComposeResponse() {
       if (detectionPairs.length > 0) {
@@ -69,7 +95,7 @@ const Solve: FC<SolveProps> = () => {
           maxWidth: 800,
           mx: "auto",
           mt: 1,
-          mb: 0, // Removed bottom margin for tighter spacing
+          mb: 0,
           display: "flex",
           alignItems: "center",
         }}
@@ -116,14 +142,35 @@ const Solve: FC<SolveProps> = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ color: "black" }}>Sequence Length</TableCell>
-                    <TableCell sx={{ color: "black" }}>Sequence Score</TableCell>
-                    <TableCell sx={{ color: "black" }}>Unused Score</TableCell>
-                    <TableCell sx={{ color: "black" }}>Unused Pieces</TableCell>
+                    {[
+                      { id: "sequenceLength", label: "Sequence Length" },
+                      { id: "sequenceScore", label: "Sequence Score" },
+                      { id: "unusedScore", label: "Unused Score" },
+                      { id: "unused", label: "Unused Pieces" },
+                    ].map((col) => (
+                      <TableCell key={col.id} sx={{ color: "black", pr: 0 }}>
+                        <TableSortLabel
+                          active={sortBy === col.id}
+                          direction={sortBy === col.id ? sortDirection : "asc"}
+                          onClick={() => handleSort(col.id)}
+                          sx={{
+                            color: "black",
+                            pr: 0,
+                            "& .MuiTableSortLabel-icon": { 
+                              color: "black !important", 
+                              marginLeft: 0 
+                            },
+                            "&.Mui-active": { color: "black" }
+                          }}
+                        >
+                          {col.label}
+                        </TableSortLabel>
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {composeResponse.map((item, index) => {
+                  {sortedComposeResponse.map((item, index) => {
                     const rowBgColor = index % 2 === 0 ? 'grey.100' : 'grey.200';
                     return (
                       <React.Fragment key={index}>
