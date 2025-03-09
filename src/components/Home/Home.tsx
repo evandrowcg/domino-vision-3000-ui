@@ -18,9 +18,7 @@ const Home = () => {
   const theme = useTheme();
 
   const handleOpen = () => setOpen(true);
-
   const handleClose = () => setOpen(false);
-
   const handleProceed = () => {
     setOpen(false);
     navigate("/solve");
@@ -34,8 +32,11 @@ const Home = () => {
       alignItems="center"
       minHeight="100vh"
     >
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 4 }}>
-        Welcome!
+      <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
+        Welcome to
+      </Typography>
+      <Typography variant="h3" fontWeight="bold" sx={{ mb: 4 }}>
+        Domino Vision 3000!
       </Typography>
       <Button
         variant="contained"
