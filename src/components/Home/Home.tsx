@@ -32,12 +32,36 @@ const Home = () => {
       alignItems="center"
       minHeight="100vh"
     >
+      <Box
+        component="img"
+        sx={{
+          width: 350,
+          maxWidth: { xs: 250, md: 300 },
+        }}
+        alt="Descriptive alt text"
+        src="./images/dominoes.png"
+      />
       <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
         Welcome to
       </Typography>
-      <Typography variant="h4" fontWeight="bold" sx={{ mb: 4 }}>
-        Domino Vision 3000!
-      </Typography>
+      {/* Container for title with beta */}
+      <Box sx={{ position: "relative", display: "inline-block", mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold">
+          Domino Vision 3000!
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            position: "absolute",
+            right: 0,
+            top: "100%",
+            mt: 0.2,
+            color: "gray",
+          }}
+        >
+          beta
+        </Typography>
+      </Box>
       <Button
         variant="contained"
         color="primary"
@@ -46,9 +70,16 @@ const Home = () => {
       >
         Count
       </Button>
-      <Button variant="contained" color="primary" onClick={handleOpen}>
+      <Button variant="contained" color="primary" sx={{ mb: 3 }} onClick={handleOpen}>
         Solve
       </Button>
+      <Typography
+  variant="caption"
+  sx={{ color: "gray", maxWidth: 300, textAlign: "center" }}
+>
+  This app was trained with double-twelve domino set and works best using a smartphone.
+</Typography>
+
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle sx={{ color: theme.palette.text.secondary }}>
           Warning
