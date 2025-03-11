@@ -2,6 +2,8 @@
 
 ![Dominoes](public/images/dominoes.png)
 
+This app was trained with double-twelve domino set and works best using a smartphone.
+
 https://domino-vision-3000.vercel.app
 
 # Getting Started with Create React App

@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Link,
   useTheme,
 } from "@mui/material";
 
@@ -41,7 +42,7 @@ const Home = () => {
         alt="Descriptive alt text"
         src="./images/dominoes.png"
       />
-      <Typography variant="h6" fontWeight="bold" sx={{ mb: 1 }}>
+      <Typography variant="h6" fontWeight="bold" sx={{ mt:1, mb: 1 }}>
         Welcome to
       </Typography>
       {/* Container for title with beta */}
@@ -55,7 +56,7 @@ const Home = () => {
             position: "absolute",
             right: 0,
             top: "100%",
-            mt: 0.2,
+            mt: 0,
             color: "gray",
           }}
         >
@@ -78,6 +79,13 @@ const Home = () => {
   sx={{ color: "gray", maxWidth: 300, textAlign: "center" }}
 >
   This app was trained with double-twelve domino set and works best using a smartphone.
+</Typography>
+<Typography
+  variant="caption"
+  sx={{ mt: 2, color: "gray", maxWidth: 300, textAlign: "center" }}>
+<Link href="https://github.com/evandrowcg/domino-vision-3000-ui" underline="hover" target="_blank">
+        Github
+      </Link>
 </Typography>
 
       <Dialog open={open} onClose={handleClose}>
