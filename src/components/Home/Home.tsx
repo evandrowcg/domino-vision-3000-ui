@@ -78,7 +78,7 @@ const Home = () => {
   variant="caption"
   sx={{ color: "gray", maxWidth: 300, textAlign: "center" }}
 >
-  This app was trained with double-twelve domino set and works best using a smartphone.
+  This app was trained with double-twelve domino set (Like above) and works best using a smartphone.
 </Typography>
 <Typography
   variant="caption"

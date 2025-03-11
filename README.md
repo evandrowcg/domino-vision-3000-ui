@@ -1,38 +1,43 @@
-# Domino Vision 3000
-
 ![Dominoes](public/images/dominoes.png)
 
-This app was trained with double-twelve domino set and works best using a smartphone.
+# Domino Vision 3000
+
+A React-based web app for counting and solving domino sets directly in the browser. The current model used in this project is trained on a double-twelve domino set.
+
+## 🚀 Live Demo
 
 https://domino-vision-3000.vercel.app
 
-# Getting Started with Create React App
+## 📌 Project Overview
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Domino Vision 3000 is a personal challenge and hobby project developed using React. It enables real-time domino detection directly in the browser. The model was trained using **Ultralytics YOLOv8s** and later converted to **TensorFlow\.js** for seamless in-browser execution.
 
-## Available Scripts
+## 🛠 Installation & Usage
 
-In the project directory, you can run:
+To get started, navigate to the project directory and follow these steps:
 
-### `npm start`
+### 1️⃣ Install Dependencies
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```sh
+npm install
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+This command installs all required packages for the project.
 
-### `npm test`
+### 2️⃣ Run in Development Mode
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```sh
+npm start
+```
 
-### `npm run build`
+This starts the app in development mode. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The page will reload when you make edits, and any lint errors will appear in the console.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 3️⃣ Run Tests
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```sh
+npm test
+```
+
+Launches the test runner in interactive watch mode. See more about [running tests](https://facebook.github.io/create-react-app/docs/running-tests).
