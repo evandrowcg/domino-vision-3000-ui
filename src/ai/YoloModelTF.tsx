@@ -42,10 +42,26 @@ export class YoloModelTF {
       await this.loadModel();
     }
 
-    // Preprocess the image: convert from canvas, resize, normalize, and add a batch dimension.
+    // Preprocess the image:
+    // 1. Convert from canvas to tensor.
+    // 2. Convert to grayscale (black and white).
+    // 3. Replicate the grayscale channel to produce a 3-channel image.
+    // 4. Resize, normalize, and add a batch dimension.
     const batchedInput = tf.tidy(() => {
       const tensorInput = tf.browser.fromPixels(input);
-      const resizedInput = tf.image.resizeBilinear(tensorInput, [this.modelWidth, this.modelHeight]);
+
+      // Convert image to grayscale using the luminance formula:
+      // gray = 0.299 * R + 0.587 * G + 0.114 * B
+      const gray = tf.tidy(() => {
+        const r = tensorInput.slice([0, 0, 0], [-1, -1, 1]);
+        const g = tensorInput.slice([0, 0, 1], [-1, -1, 1]);
+        const b = tensorInput.slice([0, 0, 2], [-1, -1, 1]);
+        const grayTensor = r.mul(0.299).add(g.mul(0.587)).add(b.mul(0.114));
+        // Replicate the grayscale channel 3 times to match expected input shape.
+        return tf.concat([grayTensor, grayTensor, grayTensor], 2) as tf.Tensor3D;
+      });     
+
+      const resizedInput = tf.image.resizeBilinear(gray, [this.modelWidth, this.modelHeight]);
       const normalizedInput = resizedInput.div(255.0);
       return normalizedInput.expandDims(0);
     });
@@ -77,7 +93,6 @@ export class YoloModelTF {
       return [s, c];
     });
     predictionTransposed.dispose();
-    // End of inlined logic.
 
     // Apply non-maximum suppression.
     const nmsIndices = await tf.image.nonMaxSuppressionAsync(

@@ -4,7 +4,7 @@ export interface ModelConfig {
 }
 
 export const DOMINO_YOLOV8s: ModelConfig = {
-    modelUrl: './models/tiles_yolo8s/model.json',
+    modelUrl: './models/tiles_yolo8s_bw/model.json',
     modelClasses: [
         "0x0", "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7", "0x8", "0x9", "0x10", "0x11", "0x12",
         "1x1", "1x2", "1x3", "1x4", "1x5", "1x6", "1x7", "1x8", "1x9", "1x10", "1x11", "1x12",

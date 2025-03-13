@@ -1,0 +1,109 @@
+description: Ultralytics best model trained on /content/data.yaml
+author: Ultralytics
+date: '2025-03-13T22:29:39.365016'
+version: 8.3.89
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: '0x0'
+  1: '0x1'
+  2: '0x2'
+  3: '0x3'
+  4: '0x4'
+  5: '0x5'
+  6: '0x6'
+  7: '0x7'
+  8: '0x8'
+  9: '0x9'
+  10: '0x10'
+  11: '0x11'
+  12: '0x12'
+  13: 1x1
+  14: 1x2
+  15: 1x3
+  16: 1x4
+  17: 1x5
+  18: 1x6
+  19: 1x7
+  20: 1x8
+  21: 1x9
+  22: 1x10
+  23: 1x11
+  24: 1x12
+  25: 2x2
+  26: 2x3
+  27: 2x4
+  28: 2x5
+  29: 2x6
+  30: 2x7
+  31: 2x8
+  32: 2x9
+  33: 2x10
+  34: 2x11
+  35: 2x12
+  36: 3x3
+  37: 3x4
+  38: 3x5
+  39: 3x6
+  40: 3x7
+  41: 3x8
+  42: 3x9
+  43: 3x10
+  44: 3x11
+  45: 3x12
+  46: 4x4
+  47: 4x5
+  48: 4x6
+  49: 4x7
+  50: 4x8
+  51: 4x9
+  52: 4x10
+  53: 4x11
+  54: 4x12
+  55: 5x5
+  56: 5x6
+  57: 5x7
+  58: 5x8
+  59: 5x9
+  60: 5x10
+  61: 5x11
+  62: 5x12
+  63: 6x6
+  64: 6x7
+  65: 6x8
+  66: 6x9
+  67: 6x10
+  68: 6x11
+  69: 6x12
+  70: 7x7
+  71: 7x8
+  72: 7x9
+  73: 7x10
+  74: 7x11
+  75: 7x12
+  76: 8x8
+  77: 8x9
+  78: 8x10
+  79: 8x11
+  80: 8x12
+  81: 9x9
+  82: 9x10
+  83: 9x11
+  84: 9x12
+  85: 10x10
+  86: 10x11
+  87: 10x12
+  88: 11x11
+  89: 11x12
+  90: 12x12
+args:
+  batch: 1
+  half: false
+  int8: false
+  nms: false
