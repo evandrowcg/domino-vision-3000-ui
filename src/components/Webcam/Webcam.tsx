@@ -9,6 +9,12 @@ import {
   Menu,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  useTheme
 } from '@mui/material';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
@@ -35,8 +41,10 @@ interface WebcamProps {
 }
 
 const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
+  const theme = useTheme();
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenCanvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
   const predictionIntervalRef = useRef<number | null>(null);
 
   // State variables.
@@ -45,6 +53,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [frozenPredictions, setFrozenPredictions] = useState<Prediction[]>([]);
   const [livePredictions, setLivePredictions] = useState(true);
   const [showPredictionScore, setShowPredictionScore] = useState(false);
+  const [showSlowDialog, setShowSlowDialog] = useState(false);
 
   const [manualBoxMode, setManualBoxMode] = useState(false);
   const [removeBoxMode, setRemoveBoxMode] = useState(false);
@@ -85,33 +94,44 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     []
   );
 
-  // Process predictions: capture frame, run model, and draw bounding boxes/labels.
+  // Process predictions: capture frame, run model, and draw bounding boxes and labels.
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!video || !overlayCanvas) return [];
     if (video.videoWidth === 0 || video.videoHeight === 0) return [];
 
-    const offscreenCanvas = document.createElement('canvas');
+    // Reuse the offscreen canvas.
+    const offscreenCanvas = offscreenCanvasRef.current;
     offscreenCanvas.width = video.videoWidth;
     offscreenCanvas.height = video.videoHeight;
     const offscreenCtx = offscreenCanvas.getContext('2d');
     if (!offscreenCtx) return [];
     offscreenCtx.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
+    // Measure prediction time.
+    const startTime = performance.now();
     const detections = await yoloModel.predict(offscreenCanvas);
+    const elapsedTime = performance.now() - startTime;
+    if (elapsedTime > 2000 && livePredictions && !showSlowDialog) {
+      // Disable live predictions immediately and show dialog.
+      setLivePredictions(false);
+      setShowSlowDialog(true);
+    }
 
     overlayCanvas.width = video.videoWidth;
     overlayCanvas.height = video.videoHeight;
     const ctx = overlayCanvas.getContext('2d');
     if (ctx && !frozen && livePredictions) {
       ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      // First draw all boxes.
       detections.forEach((detection) => {
         const [x, y, width, height] = detection.bbox;
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)'; // 60% red.
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, width, height);
       });
+      // Then draw all labels on top.
       detections.forEach((detection) => {
         const [x, y] = detection.bbox;
         const labelText = showPredictionScore
@@ -121,14 +141,18 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
     }
     return detections;
-  }, [yoloModel, frozen, livePredictions, showPredictionScore, drawLabel]);
+  }, [yoloModel, frozen, livePredictions, showPredictionScore, drawLabel, showSlowDialog]);
 
-  // Start the webcam video.
+  // Start the webcam video with lower resolution.
   const startVideo = useCallback(async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'environment',
+          },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -167,14 +191,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     };
   }, [yoloModel, startVideo]);
 
-  // Set interval for predictions.
+  // Set interval for predictions (every 1000ms).
   useEffect(() => {
     if (predictionIntervalRef.current) {
       clearInterval(predictionIntervalRef.current);
       predictionIntervalRef.current = null;
     }
     if (!frozen && livePredictions) {
-      predictionIntervalRef.current = window.setInterval(processPredictions, 500);
+      predictionIntervalRef.current = window.setInterval(processPredictions, 1000);
     } else if (!frozen && !livePredictions) {
       const overlayCanvas = overlayCanvasRef.current;
       if (overlayCanvas) {
@@ -198,12 +222,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         canvas.height = video.videoHeight;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (frozenPredictions.length > 0) {
+          // Draw boxes.
           frozenPredictions.forEach((detection) => {
             const [x, y, width, height] = detection.bbox;
-            ctx.strokeStyle = 'red';
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, width, height);
           });
+          // Draw labels on top.
           frozenPredictions.forEach((detection) => {
             const [x, y] = detection.bbox;
             const labelText = showPredictionScore
@@ -211,8 +237,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               : detection.class;
             drawLabel(ctx, x, y, labelText);
           });
-        } else {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
       }
     }
@@ -250,7 +274,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     } else {
       video.play().catch((err: any) => console.error('Error resuming video:', err));
       if (livePredictions) {
-        predictionIntervalRef.current = window.setInterval(processPredictions, 500);
+        predictionIntervalRef.current = window.setInterval(processPredictions, 1000);
       }
       setFrozen(false);
       setSnapshot(null);
@@ -345,254 +369,288 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   }, [manualBoxMode, manualBoxCoords, editBoxMode, editBoxIndex]);
 
   return (
-    <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
-      <CardContent>
-        {/* Video container */}
-        <div style={{ position: 'relative', width: '100%' }}>
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            style={{
-              width: '100%',
-              borderRadius: 4,
-              display: 'block',
-              opacity: frozen ? 0 : 1,
-            }}
-          />
-          {frozen && snapshot && (
-            <img
-              src={snapshot}
-              alt="Frozen frame"
+    <>
+      <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
+        <CardContent>
+          {/* Video container */}
+          <div style={{ position: 'relative', width: '100%' }}>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
               style={{
                 width: '100%',
                 borderRadius: 4,
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                pointerEvents: 'none',
+                display: 'block',
+                opacity: frozen ? 0 : 1,
               }}
             />
-          )}
-          <canvas
-            ref={overlayCanvasRef}
-            onClick={handleCanvasClick}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              pointerEvents: (manualBoxMode || removeBoxMode || editBoxMode) ? 'auto' : 'none',
-              borderRadius: 4,
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'transparent',
-            }}
-          />
-          {/* Three-dot menu button */}
-          <IconButton
-            style={{ position: 'absolute', top: 8, right: 8, color: 'black', zIndex: 31 }}
-            onClick={(event) => setMenuAnchorEl(event.currentTarget)}
-          >
-            <MoreVertIcon />
-          </IconButton>
-          <Menu
-            anchorEl={menuAnchorEl}
-            open={Boolean(menuAnchorEl)}
-            onClose={() => setMenuAnchorEl(null)}
-          >
-            <MenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                setLivePredictions(!livePredictions);
-              }}
-            >
-              <Checkbox checked={livePredictions} />
-              <Typography variant="inherit" style={{ color: 'black' }}>
-                Live predictions
-              </Typography>
-            </MenuItem>
-            <MenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPredictionScore(!showPredictionScore);
-              }}
-            >
-              <Checkbox checked={showPredictionScore} />
-              <Typography variant="inherit" style={{ color: 'black' }}>
-                Show prediction score
-              </Typography>
-            </MenuItem>
-          </Menu>
-          {loading && (
-            <div
+            {frozen && snapshot && (
+              <img
+                src={snapshot}
+                alt="Frozen frame"
+                style={{
+                  width: '100%',
+                  borderRadius: 4,
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+            <canvas
+              ref={overlayCanvasRef}
+              onClick={handleCanvasClick}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
+                pointerEvents: (manualBoxMode || removeBoxMode || editBoxMode) ? 'auto' : 'none',
+                borderRadius: 4,
                 width: '100%',
                 height: '100%',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                fontSize: '24px',
-                zIndex: 30,
+                backgroundColor: 'transparent',
               }}
+            />
+            {/* Three-dot menu button */}
+            <IconButton
+              style={{ position: 'absolute', top: 8, right: 8, color: 'black', zIndex: 31 }}
+              onClick={(event) => setMenuAnchorEl(event.currentTarget)}
             >
-              Loading model...
-            </div>
-          )}
-          {showClassSelection && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: 'white',
-                p: 2,
-                borderRadius: 1,
-                zIndex: 10,
-                width: { xs: '90vw', sm: '400px' },
-              }}
+              <MoreVertIcon />
+            </IconButton>
+            <Menu
+              anchorEl={menuAnchorEl}
+              open={Boolean(menuAnchorEl)}
+              onClose={() => setMenuAnchorEl(null)}
             >
-              <Typography variant="subtitle1" style={{ color: 'black' }}>
-                Domino:
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
-                <FormControl sx={{ minWidth: 100 }}>
-                  <InputLabel id="start-label" sx={{ color: 'black' }}>
-                    Start
-                  </InputLabel>
-                  <Select
-                    labelId="start-label"
-                    value={selectedStart}
-                    label="Start"
-                    onChange={(e) => setSelectedStart(Number(e.target.value))}
-                    sx={{
-                      color: 'black',
-                      '.MuiSvgIcon-root': { color: 'black' },
+              <MenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLivePredictions(!livePredictions);
+                }}
+              >
+                <Checkbox checked={livePredictions} />
+                <Typography variant="inherit" style={{ color: 'black' }}>
+                  Live predictions
+                </Typography>
+              </MenuItem>
+              <MenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPredictionScore(!showPredictionScore);
+                }}
+              >
+                <Checkbox checked={showPredictionScore} />
+                <Typography variant="inherit" style={{ color: 'black' }}>
+                  Show prediction score
+                </Typography>
+              </MenuItem>
+            </Menu>
+            {loading && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  fontSize: '24px',
+                  zIndex: 30,
+                }}
+              >
+                Loading model...
+              </div>
+            )}
+            {showClassSelection && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: 'white',
+                  p: 2,
+                  borderRadius: 1,
+                  zIndex: 10,
+                  width: { xs: '90vw', sm: '400px' },
+                }}
+              >
+                <Typography variant="subtitle1" style={{ color: 'black' }}>
+                  Domino:
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                  <FormControl sx={{ minWidth: 100 }}>
+                    <InputLabel id="start-label" sx={{ color: 'black' }}>
+                      Start
+                    </InputLabel>
+                    <Select
+                      labelId="start-label"
+                      value={selectedStart}
+                      label="Start"
+                      onChange={(e) => setSelectedStart(Number(e.target.value))}
+                      sx={{
+                        color: 'black',
+                        '.MuiSvgIcon-root': { color: 'black' },
+                      }}
+                    >
+                      {Array.from({ length: 13 }, (_, i) => (
+                        <MenuItem key={i} value={i} sx={{ color: 'black' }}>
+                          {i}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl sx={{ minWidth: 100 }}>
+                    <InputLabel id="end-label" sx={{ color: 'black' }}>
+                      End
+                    </InputLabel>
+                    <Select
+                      labelId="end-label"
+                      value={selectedEnd}
+                      label="End"
+                      onChange={(e) => setSelectedEnd(Number(e.target.value))}
+                      sx={{
+                        color: 'black',
+                        '.MuiSvgIcon-root': { color: 'black' },
+                      }}
+                    >
+                      {Array.from({ length: 13 }, (_, i) => (
+                        <MenuItem key={i} value={i} sx={{ color: 'black' }}>
+                          {i}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={() => {
+                      const minVal = Math.min(selectedStart, selectedEnd);
+                      const maxVal = Math.max(selectedStart, selectedEnd);
+                      const generatedClass = `${minVal}x${maxVal}`;
+                      handleClassSelection(generatedClass);
                     }}
                   >
-                    {Array.from({ length: 13 }, (_, i) => (
-                      <MenuItem key={i} value={i} sx={{ color: 'black' }}>
-                        {i}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl sx={{ minWidth: 100 }}>
-                  <InputLabel id="end-label" sx={{ color: 'black' }}>
-                    End
-                  </InputLabel>
-                  <Select
-                    labelId="end-label"
-                    value={selectedEnd}
-                    label="End"
-                    onChange={(e) => setSelectedEnd(Number(e.target.value))}
-                    sx={{
-                      color: 'black',
-                      '.MuiSvgIcon-root': { color: 'black' },
+                    Confirm
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => {
+                      setShowClassSelection(false);
                     }}
                   >
-                    {Array.from({ length: 13 }, (_, i) => (
-                      <MenuItem key={i} value={i} sx={{ color: 'black' }}>
-                        {i}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    Cancel
+                  </Button>
+                </Box>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    const minVal = Math.min(selectedStart, selectedEnd);
-                    const maxVal = Math.max(selectedStart, selectedEnd);
-                    const generatedClass = `${minVal}x${maxVal}`;
-                    handleClassSelection(generatedClass);
-                  }}
-                >
-                  Confirm
-                </Button>
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => {
-                    setShowClassSelection(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </Box>
+            )}
+          </div>
+          {/* Container for camera button (centered) and extra icons (positioned to the right edge) */}
+          <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Tooltip title={frozen ? 'Resume' : 'Freeze'}>
+                <IconButton onClick={toggleFreeze} color="primary">
+                  {frozen ? <ArrowBackIcon /> : <CameraAltIcon />}
+                </IconButton>
+              </Tooltip>
             </Box>
-          )}
-        </div>
-        {/* Container for camera button (centered) and extra icons (positioned to the right edge) */}
-        <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Tooltip title={frozen ? 'Resume' : 'Freeze'}>
-              <IconButton onClick={toggleFreeze} color="primary">
-                {frozen ? <ArrowBackIcon /> : <CameraAltIcon />}
-              </IconButton>
-            </Tooltip>
+            {frozen && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: 8,
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  gap: 1,
+                }}
+              >
+                <Tooltip title="Add Box">
+                  <IconButton
+                    color={manualBoxMode ? 'success' : 'primary'}
+                    onClick={() => {
+                      if (!manualBoxMode) {
+                        setSelectedStart(0);
+                        setSelectedEnd(0);
+                      }
+                      setManualBoxMode(!manualBoxMode);
+                      setRemoveBoxMode(false);
+                      setEditBoxMode(false);
+                    }}
+                  >
+                    <AddCircleOutlineIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Remove Box">
+                  <IconButton
+                    color={removeBoxMode ? 'error' : 'primary'}
+                    onClick={() => {
+                      setRemoveBoxMode(!removeBoxMode);
+                      setManualBoxMode(false);
+                      setEditBoxMode(false);
+                    }}
+                  >
+                    <RemoveCircleOutlineIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Edit Box">
+                  <IconButton
+                    color={editBoxMode ? 'warning' : 'primary'}
+                    onClick={() => {
+                      setEditBoxMode(!editBoxMode);
+                      setManualBoxMode(false);
+                      setRemoveBoxMode(false);
+                    }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
           </Box>
-          {frozen && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: '50%',
-                right: 8,
-                transform: 'translateY(-50%)',
-                display: 'flex',
-                gap: 1,
-              }}
-            >
-              <Tooltip title="Add Box">
-                <IconButton
-                  color={manualBoxMode ? 'success' : 'primary'}
-                  onClick={() => {
-                    if (!manualBoxMode) {
-                      setSelectedStart(0);
-                      setSelectedEnd(0);
-                    }
-                    setManualBoxMode(!manualBoxMode);
-                    setRemoveBoxMode(false);
-                    setEditBoxMode(false);
-                  }}
-                >
-                  <AddCircleOutlineIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Remove Box">
-                <IconButton
-                  color={removeBoxMode ? 'error' : 'primary'}
-                  onClick={() => {
-                    setRemoveBoxMode(!removeBoxMode);
-                    setManualBoxMode(false);
-                    setEditBoxMode(false);
-                  }}
-                >
-                  <RemoveCircleOutlineIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Edit Box">
-                <IconButton
-                  color={editBoxMode ? 'warning' : 'primary'}
-                  onClick={() => {
-                    setEditBoxMode(!editBoxMode);
-                    setManualBoxMode(false);
-                    setRemoveBoxMode(false);
-                  }}
-                >
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          )}
-        </Box>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <Dialog
+        open={showSlowDialog}
+        onClose={() => setShowSlowDialog(false)}
+      >
+        <DialogTitle sx={{ color: theme.palette.text.secondary }}>
+          Warning
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Predictions are taking too long on your device. Would you like to disable live predictions to improve performance? 
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              // Re-enable live predictions.
+              setLivePredictions(true);
+              setShowSlowDialog(false);
+            }}
+          >
+            No
+          </Button>
+          <Button
+            onClick={() => {
+              // Keep live predictions disabled.
+              setShowSlowDialog(false);
+            }}
+          >
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
