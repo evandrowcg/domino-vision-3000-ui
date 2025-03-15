@@ -589,12 +589,11 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         <DialogTitle sx={{ color: theme.palette.text.secondary }}>Warning</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Predictions are taking too long on your device. Would you like to disable live predictions to improve performance?
+            Live predictions are taking too long on your device and have been disabled to improve performance.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setLivePredictions(true); setShowSlowDialog(false); }}>No</Button>
-          <Button onClick={() => setShowSlowDialog(false)}>Yes</Button>
+          <Button onClick={() => setShowSlowDialog(false)}>Ok</Button>
         </DialogActions>
       </Dialog>
     </>
