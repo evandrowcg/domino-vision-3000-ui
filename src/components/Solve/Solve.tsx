@@ -139,14 +139,17 @@ const Solve: FC<SolveProps> = () => {
                 ))}
               </Select>
             </FormControl>
+            <Typography variant="h6" sx={{ mt: 1 }}>
+              Detected pieces count: {detectionPairs.length}
+            </Typography>
           </Box>
 
           {detectionPairs.length > 0 &&
             composeResponse &&
             composeResponse.length > 0 && (
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h5" gutterBottom>
-                  Paths:
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6">
+                  Possible paths:
                 </Typography>
                 <Box sx={{ overflowX: "auto" }}>
                   <Table sx={{ fontSize: "0.8rem" }}>

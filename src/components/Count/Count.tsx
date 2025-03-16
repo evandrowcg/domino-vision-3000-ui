@@ -49,11 +49,11 @@ const Count: FC<CountProps> = () => {
       <Webcam modelConfig={DOMINO_YOLOV8s} onDetections={handleDetections} />
       <Card sx={{ maxWidth: 800, mx: "auto", mt: 1, color: "black" }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Total Sum: {totalSum}
+        <Typography variant="h6">
+            Detected pieces count: {totalCount}
           </Typography>
           <Typography variant="h6">
-            Total Pieces: {totalCount}
+            Total sum: {totalSum}
           </Typography>
         </CardContent>
       </Card>
