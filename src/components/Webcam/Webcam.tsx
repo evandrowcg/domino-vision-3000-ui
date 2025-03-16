@@ -23,6 +23,7 @@ import Box from '@mui/material/Box';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
@@ -45,7 +46,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
-  const predictionIntervalRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Ref for the rendered (uploaded) image.
+  const uploadedImageRef = useRef<HTMLImageElement>(null);
 
   // ===== State Variables =====
   const [frozen, setFrozen] = useState(false);
@@ -64,6 +67,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [selectedStart, setSelectedStart] = useState(0);
   const [selectedEnd, setSelectedEnd] = useState(0);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  // For uploaded images, store its natural (resized) dimensions.
+  const [uploadedDimensions, setUploadedDimensions] = useState<{ width: number; height: number } | null>(null);
 
   // ===== Model Instance =====
   const yoloModel = useMemo(
@@ -90,21 +95,20 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     []
   );
 
-  // Process predictions: capture frame, run model, and draw bounding boxes and labels.
+  // Process predictions for live mode.
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!video || !overlayCanvas || video.videoWidth === 0 || video.videoHeight === 0) return [];
-
-    // Prepare offscreen canvas.
+    
+    // Prepare offscreen canvas at native video resolution.
     const offscreenCanvas = offscreenCanvasRef.current;
     offscreenCanvas.width = video.videoWidth;
     offscreenCanvas.height = video.videoHeight;
     const offscreenCtx = offscreenCanvas.getContext('2d');
     if (!offscreenCtx) return [];
     offscreenCtx.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
-
-    // Run model and measure time.
+  
     const startTime = performance.now();
     const detections = await yoloModel.predict(offscreenCanvas);
     const elapsedTime = performance.now() - startTime;
@@ -112,35 +116,39 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       setLivePredictions(false);
       setShowSlowDialog(true);
     }
-
-    // Draw detections if live predictions are enabled.
-    overlayCanvas.width = video.videoWidth;
-    overlayCanvas.height = video.videoHeight;
+  
+    // Use the video’s displayed (client) dimensions.
+    const displayedWidth = video.clientWidth;
+    const displayedHeight = video.clientHeight;
+    // For live predictions, we set the overlay canvas internal size to match the displayed size.
+    overlayCanvas.width = displayedWidth;
+    overlayCanvas.height = displayedHeight;
+    overlayCanvas.style.width = displayedWidth + "px";
+    overlayCanvas.style.height = displayedHeight + "px";
+    const scaleX = displayedWidth / video.videoWidth;
+    const scaleY = displayedHeight / video.videoHeight;
+  
     const ctx = overlayCanvas.getContext('2d');
     if (ctx && !frozen && livePredictions) {
-      ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      // Draw all bounding boxes first.
+      ctx.clearRect(0, 0, displayedWidth, displayedHeight);
       detections.forEach((detection) => {
         const [x, y, width, height] = detection.bbox;
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)'; // 60% red.
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
+        ctx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
       });
-      // Then draw all labels on top.
       detections.forEach((detection) => {
         const [x, y] = detection.bbox;
         const labelText = showPredictionScore
           ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
           : detection.class;
-        drawLabel(ctx, x, y, labelText);
+        drawLabel(ctx, x * scaleX, y * scaleY, labelText);
       });
     }
     return detections;
   }, [yoloModel, frozen, livePredictions, showPredictionScore, drawLabel, showSlowDialog]);
 
   // ===== Video & Model Initialization =====
-
-  // Start video with a lower resolution.
   const startVideo = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       console.error('getUserMedia not supported');
@@ -159,7 +167,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, []);
 
-  // Load model and start video on mount.
   useEffect(() => {
     (async () => {
       await yoloModel.loadModel();
@@ -174,98 +181,99 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     };
   }, [yoloModel, startVideo]);
 
-  // ===== Effects =====
-
-  // Set up prediction interval.
+  // ===== Prediction Interval =====
   useEffect(() => {
-    if (predictionIntervalRef.current) {
-      clearInterval(predictionIntervalRef.current);
-      predictionIntervalRef.current = null;
-    }
+    let interval: number | null = null;
     if (!frozen && livePredictions) {
-      predictionIntervalRef.current = window.setInterval(processPredictions, 1000);
+      interval = window.setInterval(processPredictions, 1000);
     } else if (!frozen && !livePredictions) {
       const overlayCanvas = overlayCanvasRef.current;
       if (overlayCanvas) {
         const ctx = overlayCanvas.getContext('2d');
-        if (ctx) {
-          ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        }
+        if (ctx) ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       }
     }
     return () => {
-      if (predictionIntervalRef.current) clearInterval(predictionIntervalRef.current);
+      if (interval) clearInterval(interval);
     };
   }, [livePredictions, frozen, processPredictions]);
 
-  // Draw frozen predictions.
+  // ===== Drawing Frozen Predictions =====
   useEffect(() => {
-    if (frozen && overlayCanvasRef.current && videoRef.current) {
+    if (frozen && overlayCanvasRef.current) {
       const canvas = overlayCanvasRef.current;
+      let drawWidth: number, drawHeight: number, scaleX = 1, scaleY = 1;
+      if (uploadedDimensions && uploadedImageRef.current) {
+        // For uploaded images, use the displayed image's dimensions.
+        drawWidth = uploadedImageRef.current.clientWidth;
+        drawHeight = uploadedImageRef.current.clientHeight;
+        scaleX = uploadedDimensions.width / drawWidth;
+        scaleY = uploadedDimensions.height / drawHeight;
+      } else if (videoRef.current) {
+        // For webcam captures, use the video element's client dimensions.
+        drawWidth = videoRef.current.clientWidth;
+        drawHeight = videoRef.current.clientHeight;
+        scaleX = videoRef.current.videoWidth / drawWidth;
+        scaleY = videoRef.current.videoHeight / drawHeight;
+      } else {
+        return;
+      }
+      // Set internal canvas dimensions and CSS style.
+      canvas.width = drawWidth;
+      canvas.height = drawHeight;
+      canvas.style.width = drawWidth + "px";
+      canvas.style.height = drawHeight + "px";
+      
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        canvas.width = videoRef.current.videoWidth;
-        canvas.height = videoRef.current.videoHeight;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (frozenPredictions.length > 0) {
-          // Draw boxes.
-          frozenPredictions.forEach((detection) => {
-            const [x, y, width, height] = detection.bbox;
-            ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
-          });
-          // Then draw labels on top.
-          frozenPredictions.forEach((detection) => {
-            const [x, y] = detection.bbox;
-            const labelText = showPredictionScore
-              ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
-              : detection.class;
-            drawLabel(ctx, x, y, labelText);
-          });
-        }
+        ctx.clearRect(0, 0, drawWidth, drawHeight);
+        frozenPredictions.forEach((detection) => {
+          const [x, y, w, h] = detection.bbox;
+          // For frozen predictions, we want to scale from native snapshot dimensions to displayed dimensions.
+          ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x / scaleX, y / scaleY, w / scaleX, h / scaleY);
+        });
+        frozenPredictions.forEach((detection) => {
+          const [x, y] = detection.bbox;
+          const labelText = showPredictionScore
+            ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
+            : detection.class;
+          drawLabel(ctx, x / scaleX, y / scaleY, labelText);
+        });
       }
     }
-  }, [frozen, frozenPredictions, showPredictionScore, drawLabel]);
+  }, [frozen, frozenPredictions, showPredictionScore, drawLabel, uploadedDimensions]);
 
-  // Pass detections to the parent.
   useEffect(() => {
     if (onDetections) onDetections(frozenPredictions);
   }, [frozenPredictions, onDetections]);
 
   // ===== Event Handlers =====
 
-  // Toggle freeze/resume.
+  // toggleFreeze: Freeze/resume the snapshot.
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
     if (!frozen) {
-      // Freeze: capture snapshot and pause video.
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = video.videoWidth;
       tempCanvas.height = video.videoHeight;
       const ctx = tempCanvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+        // Save snapshot; for webcam capture, it is drawn at native resolution.
         setSnapshot(tempCanvas.toDataURL());
       }
       video.pause();
-      if (predictionIntervalRef.current) {
-        clearInterval(predictionIntervalRef.current);
-        predictionIntervalRef.current = null;
-      }
       const detections = await processPredictions();
       setFrozenPredictions(detections.sort((a, b) => b.score - a.score));
       setFrozen(true);
     } else {
-      // Resume video.
       try {
         await video.play();
       } catch (err: any) {
         console.error('Error resuming video:', err);
-      }
-      if (livePredictions) {
-        predictionIntervalRef.current = window.setInterval(processPredictions, 1000);
       }
       setFrozen(false);
       setSnapshot(null);
@@ -276,29 +284,88 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       setRemoveBoxMode(false);
       setEditBoxMode(false);
       setEditBoxIndex(null);
+      setUploadedDimensions(null);
     }
-  }, [frozen, processPredictions, livePredictions]);
+  }, [frozen, processPredictions]);
 
-  // Handle canvas clicks for editing boxes.
+  // handleImageUpload: Load an image file, resize so largest side = 640, and run predictions.
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const img = new Image();
+        img.onload = async () => {
+          if (videoRef.current) videoRef.current.pause();
+          const maxSize = 640;
+          let targetWidth = img.width;
+          let targetHeight = img.height;
+          if (img.width >= img.height) {
+            if (img.width > maxSize) {
+              targetWidth = maxSize;
+              targetHeight = Math.round(img.height * (maxSize / img.width));
+            }
+          } else {
+            if (img.height > maxSize) {
+              targetHeight = maxSize;
+              targetWidth = Math.round(img.width * (maxSize / img.height));
+            }
+          }
+          const resizeCanvas = document.createElement('canvas');
+          resizeCanvas.width = targetWidth;
+          resizeCanvas.height = targetHeight;
+          const resizeCtx = resizeCanvas.getContext('2d');
+          if (resizeCtx) {
+            resizeCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+          }
+          const resizedDataUrl = resizeCanvas.toDataURL();
+          setSnapshot(resizedDataUrl);
+          setUploadedDimensions({ width: targetWidth, height: targetHeight });
+          setFrozen(true);
+          const predictions = await yoloModel.predict(resizeCanvas);
+          setFrozenPredictions(predictions.sort((a, b) => b.score - a.score));
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    }
+  }, [yoloModel]);
+
+  // handleCanvasClick: Compute click coordinates based on source.
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!frozen) return;
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const clickX = (e.clientX - rect.left) * scaleX;
-    const clickY = (e.clientY - rect.top) * scaleY;
+    // Get click coordinates relative to canvas display.
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    let scaleX = 1, scaleY = 1;
+    if (uploadedDimensions && uploadedImageRef.current) {
+      // For uploaded image, use image natural vs. displayed size.
+      const dispWidth = uploadedImageRef.current.clientWidth;
+      const dispHeight = uploadedImageRef.current.clientHeight;
+      scaleX = uploadedDimensions.width / dispWidth;
+      scaleY = uploadedDimensions.height / dispHeight;
+    } else if (videoRef.current) {
+      // For camera snapshot, use video native vs. displayed size.
+      scaleX = videoRef.current.videoWidth / videoRef.current.clientWidth;
+      scaleY = videoRef.current.videoHeight / videoRef.current.clientHeight;
+    }
+    // Effective coordinates in the source's coordinate space.
+    const x = clickX * scaleX;
+    const y = clickY * scaleY;
     if (manualBoxMode) {
       setSelectedStart(0);
       setSelectedEnd(0);
-      setManualBoxCoords({ x: clickX, y: clickY });
+      setManualBoxCoords({ x, y });
       setShowClassSelection(true);
     } else if (removeBoxMode) {
       setFrozenPredictions((prev) => {
         const indexToRemove = prev.findIndex((detection) => {
-          const [x, y, width, height] = detection.bbox;
-          return clickX >= x && clickX <= x + width && clickY >= y && clickY <= y + height;
+          const [dx, dy, dWidth, dHeight] = detection.bbox;
+          return x >= dx && x <= dx + dWidth && y >= dy && y <= dy + dHeight;
         });
         if (indexToRemove >= 0) {
           const newPredictions = [...prev];
@@ -309,8 +376,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
     } else if (editBoxMode) {
       const indexToEdit = frozenPredictions.findIndex((detection) => {
-        const [x, y, width, height] = detection.bbox;
-        return clickX >= x && clickX <= x + width && clickY >= y && clickY <= y + height;
+        const [dx, dy, dWidth, dHeight] = detection.bbox;
+        return x >= dx && x <= dx + dWidth && y >= dy && y <= dy + dHeight;
       });
       if (indexToEdit >= 0) {
         const detection = frozenPredictions[indexToEdit];
@@ -328,9 +395,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         setShowClassSelection(true);
       }
     }
-  }, [frozen, manualBoxMode, removeBoxMode, editBoxMode, frozenPredictions]);
+  }, [frozen, uploadedDimensions, manualBoxMode, removeBoxMode, editBoxMode, frozenPredictions]);
 
-  // Handle class selection for boxes.
   const handleClassSelection = useCallback((selectedClass: string) => {
     if (manualBoxMode && manualBoxCoords) {
       const defaultWidth = 50;
@@ -379,16 +445,30 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
             />
             {frozen && snapshot && (
               <img
+                ref={uploadedImageRef}
                 src={snapshot}
                 alt="Frozen frame"
-                style={{
-                  width: '100%',
-                  borderRadius: 4,
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  pointerEvents: 'none',
-                }}
+                style={
+                  uploadedDimensions
+                    ? {
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        borderRadius: 4,
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        pointerEvents: 'none',
+                      }
+                    : {
+                        width: videoRef.current ? videoRef.current.clientWidth : '100%',
+                        height: videoRef.current ? videoRef.current.clientHeight : '100%',
+                        borderRadius: 4,
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        pointerEvents: 'none',
+                      }
+                }
               />
             )}
             <canvas
@@ -400,8 +480,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 left: 0,
                 pointerEvents: (manualBoxMode || removeBoxMode || editBoxMode) ? 'auto' : 'none',
                 borderRadius: 4,
-                width: '100%',
-                height: '100%',
                 backgroundColor: 'transparent',
               }}
             />
@@ -424,7 +502,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 }}
               >
                 <Checkbox checked={livePredictions} />
-                <Typography variant="inherit" style={{ color: 'black' }}>Live predictions</Typography>
+                <Typography variant="inherit" style={{ color: 'black' }}>
+                  Live predictions
+                </Typography>
               </MenuItem>
               <MenuItem
                 onClick={(e) => {
@@ -433,7 +513,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 }}
               >
                 <Checkbox checked={showPredictionScore} />
-                <Typography variant="inherit" style={{ color: 'black' }}>Show prediction score</Typography>
+                <Typography variant="inherit" style={{ color: 'black' }}>
+                  Show prediction score
+                </Typography>
               </MenuItem>
             </Menu>
             {loading && (
@@ -469,10 +551,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   width: { xs: '90vw', sm: '400px' },
                 }}
               >
-                <Typography variant="subtitle1" style={{ color: 'black' }}>Domino:</Typography>
+                <Typography variant="subtitle1" style={{ color: 'black' }}>
+                  Domino:
+                </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
                   <FormControl sx={{ minWidth: 100 }}>
-                    <InputLabel id="start-label" sx={{ color: 'black' }}>Start</InputLabel>
+                    <InputLabel id="start-label" sx={{ color: 'black' }}>
+                      Start
+                    </InputLabel>
                     <Select
                       labelId="start-label"
                       value={selectedStart}
@@ -481,12 +567,16 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                       sx={{ color: 'black', '.MuiSvgIcon-root': { color: 'black' } }}
                     >
                       {Array.from({ length: 13 }, (_, i) => (
-                        <MenuItem key={i} value={i} sx={{ color: 'black' }}>{i}</MenuItem>
+                        <MenuItem key={i} value={i} sx={{ color: 'black' }}>
+                          {i}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                   <FormControl sx={{ minWidth: 100 }}>
-                    <InputLabel id="end-label" sx={{ color: 'black' }}>End</InputLabel>
+                    <InputLabel id="end-label" sx={{ color: 'black' }}>
+                      End
+                    </InputLabel>
                     <Select
                       labelId="end-label"
                       value={selectedEnd}
@@ -495,7 +585,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                       sx={{ color: 'black', '.MuiSvgIcon-root': { color: 'black' } }}
                     >
                       {Array.from({ length: 13 }, (_, i) => (
-                        <MenuItem key={i} value={i} sx={{ color: 'black' }}>{i}</MenuItem>
+                        <MenuItem key={i} value={i} sx={{ color: 'black' }}>
+                          {i}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -521,70 +613,104 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
           </div>
           {/* Camera Controls */}
           <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
-            <Box sx={{ textAlign: 'center' }}>
-              <Tooltip title={frozen ? 'Resume' : 'Freeze'}>
-                <IconButton onClick={toggleFreeze} color="primary">
-                  {frozen ? <ArrowBackIcon /> : <CameraAltIcon />}
-                </IconButton>
-              </Tooltip>
-            </Box>
-            {frozen && (
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  right: 8,
-                  transform: 'translateY(-50%)',
-                  display: 'flex',
-                  gap: 1,
-                }}
-              >
-                <Tooltip title="Add Box">
-                  <IconButton
-                    color={manualBoxMode ? 'success' : 'primary'}
-                    onClick={() => {
-                      if (!manualBoxMode) {
-                        setSelectedStart(0);
-                        setSelectedEnd(0);
-                      }
-                      setManualBoxMode(!manualBoxMode);
-                      setRemoveBoxMode(false);
-                      setEditBoxMode(false);
-                    }}
-                  >
-                    <AddCircleOutlineIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Remove Box">
-                  <IconButton
-                    color={removeBoxMode ? 'error' : 'primary'}
-                    onClick={() => {
-                      setRemoveBoxMode(!removeBoxMode);
-                      setManualBoxMode(false);
-                      setEditBoxMode(false);
-                    }}
-                  >
-                    <RemoveCircleOutlineIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Edit Box">
-                  <IconButton
-                    color={editBoxMode ? 'warning' : 'primary'}
-                    onClick={() => {
-                      setEditBoxMode(!editBoxMode);
-                      setManualBoxMode(false);
-                      setRemoveBoxMode(false);
-                    }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+            {!frozen ? (
+              <>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <Tooltip title="Freeze">
+                    <IconButton onClick={toggleFreeze} color="primary">
+                      <CameraAltIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    right: 8,
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    gap: 1,
+                  }}
+                >
+                  <Tooltip title="Upload Image">
+                    <IconButton onClick={() => fileInputRef.current?.click()} color="primary">
+                      <CloudUploadIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </>
+            ) : (
+              <>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Tooltip title="Resume">
+                    <IconButton onClick={toggleFreeze} color="primary">
+                      <ArrowBackIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    right: 8,
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    gap: 1,
+                  }}
+                >
+                  <Tooltip title="Add Box">
+                    <IconButton
+                      color={manualBoxMode ? 'success' : 'primary'}
+                      onClick={() => {
+                        if (!manualBoxMode) {
+                          setSelectedStart(0);
+                          setSelectedEnd(0);
+                        }
+                        setManualBoxMode(!manualBoxMode);
+                        setRemoveBoxMode(false);
+                        setEditBoxMode(false);
+                      }}
+                    >
+                      <AddCircleOutlineIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Remove Box">
+                    <IconButton
+                      color={removeBoxMode ? 'error' : 'primary'}
+                      onClick={() => {
+                        setRemoveBoxMode(!removeBoxMode);
+                        setManualBoxMode(false);
+                        setEditBoxMode(false);
+                      }}
+                    >
+                      <RemoveCircleOutlineIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Edit Box">
+                    <IconButton
+                      color={editBoxMode ? 'warning' : 'primary'}
+                      onClick={() => {
+                        setEditBoxMode(!editBoxMode);
+                        setManualBoxMode(false);
+                        setRemoveBoxMode(false);
+                      }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </>
             )}
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleImageUpload}
+            />
           </Box>
         </CardContent>
       </Card>
-      {/* Performance Warning Dialog */}
       <Dialog open={showSlowDialog} onClose={() => setShowSlowDialog(false)}>
         <DialogTitle sx={{ color: theme.palette.text.secondary }}>Warning</DialogTitle>
         <DialogContent>
