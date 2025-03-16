@@ -616,7 +616,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
             {!frozen ? (
               <>
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <Tooltip title="Freeze">
+                  <Tooltip title="Capture Image">
                     <IconButton onClick={toggleFreeze} color="primary">
                       <CameraAltIcon />
                     </IconButton>
