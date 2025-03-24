@@ -55,6 +55,18 @@ const combineAll = (available, sequence, head, sequenceLength, sequenceScore, un
     return results;
   }
 
+  if (sequenceLength === 0) {
+    return [];
+  }
+
+  // The last one with a double cannot compose a valid sequence
+  const [ lastLeft, lastRight ] = sequence[sequenceLength - 1];
+
+  if (lastLeft === lastRight && available.length > 0) {
+    return [];
+  }
+
+  // If there is no results, it means that this is the end of the streak
   return [
     {
       sequenceLength,
@@ -78,7 +90,14 @@ const retrieveUnique = (possibilities) => {
 
 export const combine = (available, head) => {
   const totalScore = available.reduce((acc, [left, right]) => acc + left + right, 0);
-  const possibilities = retrieveUnique(combineAll(available, [], head, 0, 0, totalScore));
-  possibilities.sort((a, b) => b.sequenceLength - a.sequenceLength);
+  const possibilities = retrieveUnique(
+    combineAll(available, [], head, 0, 0, totalScore)
+  );
+
+  possibilities.sort((a, b) => b.sequenceLength === a.sequenceLength
+      ? b.sequenceScore - a.sequenceScore
+      : b.sequenceLength - a.sequenceLength
+  );
+
   return possibilities;
 };
