@@ -39,10 +39,7 @@ describe('combine function', () => {
     const result = combine(available, head);
 
     expect(result).toBeDefined();
-    expect(result.length).toBe(1);
-    expect(result[0].sequenceLength).toBe(0);
-    expect(result[0].unused).toBe(2);
-    expect(result[0].unusedScore).toBe(10);
+    expect(result.length).toBe(0);
   });
 
   test('should return the best sequence for a large sequence of complex tiles', () => {
@@ -69,5 +66,19 @@ describe('combine function', () => {
 
     expect(result).toBeDefined();
     expect(result[0].sequenceLength).toBe(13);
+  });
+
+  test('should not return sequences with double values as last tile', () => {
+    const available = [
+      [0, 1],
+      [1, 2],
+      [2, 2],
+    ];
+    const head = 0;
+    const result = combine(available, head);
+
+    expect(result).toBeDefined();
+    expect(result.length).toBe(1);
+    expect(result[0].sequenceLength).toBe(2);
   });
 });
