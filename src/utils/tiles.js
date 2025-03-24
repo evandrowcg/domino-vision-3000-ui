@@ -62,7 +62,7 @@ const combineAll = (available, sequence, head, sequenceLength, sequenceScore, un
   // The last one with a double cannot compose a valid sequence
   const [ lastLeft, lastRight ] = sequence[sequenceLength - 1];
 
-  if (lastLeft === lastRight) {
+  if (lastLeft === lastRight && available.length > 0) {
     return [];
   }
 

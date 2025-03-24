@@ -73,6 +73,7 @@ describe('combine function', () => {
       [0, 1],
       [1, 2],
       [2, 2],
+      [5, 3],
     ];
     const head = 0;
     const result = combine(available, head);
@@ -80,5 +81,19 @@ describe('combine function', () => {
     expect(result).toBeDefined();
     expect(result.length).toBe(1);
     expect(result[0].sequenceLength).toBe(2);
+  });
+
+  test('should return sequences with double values as last tile if no other tile is available', () => {
+    const available = [
+      [0, 1],
+      [1, 2],
+      [2, 2],
+    ];
+    const head = 0;
+    const result = combine(available, head);
+
+    expect(result).toBeDefined();
+    expect(result.length).toBe(1);
+    expect(result[0].sequenceLength).toBe(3);
   });
 });
