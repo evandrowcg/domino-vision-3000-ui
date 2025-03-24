@@ -47,7 +47,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Ref for the rendered (uploaded) image.
   const uploadedImageRef = useRef<HTMLImageElement>(null);
 
   // ===== State Variables =====
@@ -67,8 +66,11 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [selectedStart, setSelectedStart] = useState(0);
   const [selectedEnd, setSelectedEnd] = useState(0);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  // For uploaded images, store its natural (resized) dimensions.
   const [uploadedDimensions, setUploadedDimensions] = useState<{ width: number; height: number } | null>(null);
+  // New state for smartphone light (torch)
+  const [lightOn, setLightOn] = useState(false);
+  // New state for showing the torch dialog when not available.
+  const [showTorchDialog, setShowTorchDialog] = useState(false);
 
   // ===== Model Instance =====
   const yoloModel = useMemo(
@@ -78,7 +80,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
 
   // ===== Helper Functions =====
 
-  // Draw a label with a semi-transparent background.
   const drawLabel = useCallback(
     (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => {
       const fontSize = 18;
@@ -95,13 +96,11 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     []
   );
 
-  // Process predictions for live mode.
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!video || !overlayCanvas || video.videoWidth === 0 || video.videoHeight === 0) return [];
     
-    // Prepare offscreen canvas at native video resolution.
     const offscreenCanvas = offscreenCanvasRef.current;
     offscreenCanvas.width = video.videoWidth;
     offscreenCanvas.height = video.videoHeight;
@@ -117,10 +116,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       setShowSlowDialog(true);
     }
   
-    // Use the video’s displayed (client) dimensions.
     const displayedWidth = video.clientWidth;
     const displayedHeight = video.clientHeight;
-    // For live predictions, we set the overlay canvas internal size to match the displayed size.
     overlayCanvas.width = displayedWidth;
     overlayCanvas.height = displayedHeight;
     overlayCanvas.style.width = displayedWidth + "px";
@@ -147,6 +144,24 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
     return detections;
   }, [yoloModel, frozen, livePredictions, showPredictionScore, drawLabel, showSlowDialog]);
+
+  // ===== Toggle Smartphone Light =====
+  const toggleLight = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      const track = stream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities();
+      if ('torch' in capabilities && (capabilities as any).torch !== undefined) {
+        track.applyConstraints({ advanced: [{ torch: !lightOn }] } as any)
+          .then(() => setLightOn(!lightOn))
+          .catch((error) => console.error("Error toggling torch:", error));
+      } else {
+        // Show dialog if torch is not supported.
+        setShowTorchDialog(true);
+        console.warn("Torch is not supported on this device.");
+      }      
+    }
+  }, [lightOn]);
 
   // ===== Video & Model Initialization =====
   const startVideo = useCallback(async () => {
@@ -204,13 +219,11 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const canvas = overlayCanvasRef.current;
       let drawWidth: number, drawHeight: number, scaleX = 1, scaleY = 1;
       if (uploadedDimensions && uploadedImageRef.current) {
-        // For uploaded images, use the displayed image's dimensions.
         drawWidth = uploadedImageRef.current.clientWidth;
         drawHeight = uploadedImageRef.current.clientHeight;
         scaleX = uploadedDimensions.width / drawWidth;
         scaleY = uploadedDimensions.height / drawHeight;
       } else if (videoRef.current) {
-        // For webcam captures, use the video element's client dimensions.
         drawWidth = videoRef.current.clientWidth;
         drawHeight = videoRef.current.clientHeight;
         scaleX = videoRef.current.videoWidth / drawWidth;
@@ -218,7 +231,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       } else {
         return;
       }
-      // Set internal canvas dimensions and CSS style.
       canvas.width = drawWidth;
       canvas.height = drawHeight;
       canvas.style.width = drawWidth + "px";
@@ -229,7 +241,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         ctx.clearRect(0, 0, drawWidth, drawHeight);
         frozenPredictions.forEach((detection) => {
           const [x, y, w, h] = detection.bbox;
-          // For frozen predictions, we want to scale from native snapshot dimensions to displayed dimensions.
           ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
           ctx.lineWidth = 2;
           ctx.strokeRect(x / scaleX, y / scaleY, w / scaleX, h / scaleY);
@@ -251,7 +262,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
 
   // ===== Event Handlers =====
 
-  // toggleFreeze: Freeze/resume the snapshot.
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
@@ -262,7 +272,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const ctx = tempCanvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-        // Save snapshot; for webcam capture, it is drawn at native resolution.
         setSnapshot(tempCanvas.toDataURL());
       }
       video.pause();
@@ -288,7 +297,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, [frozen, processPredictions]);
 
-  // handleImageUpload: Load an image file, resize so largest side = 640, and run predictions.
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -332,28 +340,23 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     }
   }, [yoloModel]);
 
-  // handleCanvasClick: Compute click coordinates based on source.
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!frozen) return;
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    // Get click coordinates relative to canvas display.
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
     let scaleX = 1, scaleY = 1;
     if (uploadedDimensions && uploadedImageRef.current) {
-      // For uploaded image, use image natural vs. displayed size.
       const dispWidth = uploadedImageRef.current.clientWidth;
       const dispHeight = uploadedImageRef.current.clientHeight;
       scaleX = uploadedDimensions.width / dispWidth;
       scaleY = uploadedDimensions.height / dispHeight;
     } else if (videoRef.current) {
-      // For camera snapshot, use video native vs. displayed size.
       scaleX = videoRef.current.videoWidth / videoRef.current.clientWidth;
       scaleY = videoRef.current.videoHeight / videoRef.current.clientHeight;
     }
-    // Effective coordinates in the source's coordinate space.
     const x = clickX * scaleX;
     const y = clickY * scaleY;
     if (manualBoxMode) {
@@ -430,7 +433,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     <>
       <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
         <CardContent>
-          {/* Video & Overlay Canvas */}
           <div style={{ position: 'relative', width: '100%' }}>
             <video
               ref={videoRef}
@@ -515,6 +517,18 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 <Checkbox checked={showPredictionScore} />
                 <Typography variant="inherit" style={{ color: 'black' }}>
                   Show prediction score
+                </Typography>
+              </MenuItem>
+              {/* New Menu Item for Smartphone Light */}
+              <MenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleLight();
+                }}
+              >
+                <Checkbox checked={lightOn} />
+                <Typography variant="inherit" style={{ color: 'black' }}>
+                  Smartphone light
                 </Typography>
               </MenuItem>
             </Menu>
@@ -720,6 +734,18 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowSlowDialog(false)}>Ok</Button>
+        </DialogActions>
+      </Dialog>
+      {/* New Dialog for Torch Not Supported */}
+      <Dialog open={showTorchDialog} onClose={() => setShowTorchDialog(false)}>
+        <DialogTitle>Torch Not Supported</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            The torch (smartphone light) is not supported on this device.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowTorchDialog(false)}>Ok</Button>
         </DialogActions>
       </Dialog>
     </>
