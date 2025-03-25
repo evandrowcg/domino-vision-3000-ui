@@ -115,6 +115,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       setLivePredictions(false);
       setShowSlowDialog(true);
     }
+    setLoading(false);
   
     const displayedWidth = video.clientWidth;
     const displayedHeight = video.clientHeight;
@@ -185,7 +186,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   useEffect(() => {
     (async () => {
       await yoloModel.loadModel();
-      setLoading(false);
       startVideo();
     })();
     const video = videoRef.current;
@@ -516,7 +516,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               >
                 <Checkbox checked={showPredictionScore} />
                 <Typography variant="inherit" style={{ color: 'black' }}>
-                  Show prediction score
+                  Predictions score
                 </Typography>
               </MenuItem>
               {/* New Menu Item for Smartphone Light */}
@@ -528,7 +528,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               >
                 <Checkbox checked={lightOn} />
                 <Typography variant="inherit" style={{ color: 'black' }}>
-                  Smartphone light
+                  Torch (Light)
                 </Typography>
               </MenuItem>
             </Menu>
@@ -738,10 +738,10 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       </Dialog>
       {/* New Dialog for Torch Not Supported */}
       <Dialog open={showTorchDialog} onClose={() => setShowTorchDialog(false)}>
-        <DialogTitle>Torch Not Supported</DialogTitle>
+        <DialogTitle sx={{ color: theme.palette.text.secondary }}>Warning</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            The torch (smartphone light) is not supported on this device.
+            The torch (light) is not supported on this device.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
