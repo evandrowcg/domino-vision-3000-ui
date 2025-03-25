@@ -255,7 +255,7 @@ const Solve: FC<SolveProps> = () => {
                             <TableRow sx={{ backgroundColor: rowBgColor }}>
                               <TableCell sx={{ color: "black" }} colSpan={4}>
                                 {item.sequence.map(([left, right]: [number, number], index: number) => (
-                                  <Domino key={index} left={left} right={right} width="50px" margin="0 5px 0 0" />
+                                  <Domino key={index} left={left} right={right} width="50px" margin="2px 3px 2px 0" />
                                 ))}
                               </TableCell>
                             </TableRow>
