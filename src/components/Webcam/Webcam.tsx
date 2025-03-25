@@ -112,7 +112,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const startTime = performance.now();
     const detections = await yoloModel.predict(offscreenCanvas);
     const elapsedTime = performance.now() - startTime;
-    if (elapsedTime > 2000 && livePredictions && !showSlowDialog) {
+    if (elapsedTime > 2500 && livePredictions && !showSlowDialog) {
       setLivePredictions(false);
       setShowSlowDialog(true);
     }
@@ -541,7 +541,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  color: "white",
+                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
