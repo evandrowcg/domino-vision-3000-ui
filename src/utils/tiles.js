@@ -72,7 +72,7 @@ const combineAll = (available, sequence, head, sequenceLength, sequenceScore, un
       sequenceLength,
       sequenceScore,
       unusedScore,
-      sequence: JSON.stringify(sequence),
+      sequence: sequence,
       hash: getSequenceHashValue(sequence),
       unused: available.length,
     },

@@ -29,6 +29,7 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
+import Domino from '../Domino/Domino';
 
 interface Point {
   x: number;
@@ -587,6 +588,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                       ))}
                     </Select>
                   </FormControl>
+                  <Domino left={selectedStart} right={selectedEnd} width="75px" />
                   <FormControl sx={{ minWidth: 100 }}>
                     <InputLabel id="end-label" sx={{ color: 'black' }}>
                       End

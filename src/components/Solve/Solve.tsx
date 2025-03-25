@@ -30,6 +30,7 @@ import {
   TableSortLabel,
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
+import Domino from "../Domino/Domino";
 
 interface SolveProps {}
 
@@ -253,12 +254,9 @@ const Solve: FC<SolveProps> = () => {
                             </TableRow>
                             <TableRow sx={{ backgroundColor: rowBgColor }}>
                               <TableCell sx={{ color: "black" }} colSpan={4}>
-                                <Typography
-                                  variant="body2"
-                                  sx={{ fontStyle: "italic", color: "black" }}
-                                >
-                                  {item.sequence}
-                                </Typography>
+                                {item.sequence.map(([left, right]: [number, number], index: number) => (
+                                  <Domino key={index} left={left} right={right} width="50px" margin="0 5px 0 0" />
+                                ))}
                               </TableCell>
                             </TableRow>
                           </React.Fragment>
