@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { Link } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import Webcam from "../Webcam/Webcam";
 import { DOMINO_YOLOV8s } from "../../ai/ModelConfig";
 import { Prediction } from "../../ai/YoloModelTF";
@@ -28,6 +29,11 @@ import {
   Card,
   IconButton,
   TableSortLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
 import Domino from "../Domino/Domino";
@@ -40,9 +46,12 @@ const Solve: FC<SolveProps> = () => {
   const [selectedValue, setSelectedValue] = useState<number>(0);
   const prevPairsRef = useRef<number[][]>([]);
 
-  // Set default sort: "sequenceLength" descending by default.
   const [sortBy, setSortBy] = useState<string>("sequenceLength");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const [helpOpen, setHelpOpen] = useState(false);
+  const handleOpenHelp = () => setHelpOpen(true);
+  const handleCloseHelp = () => setHelpOpen(false);
 
   const handleDetections = useCallback((newDetections: Prediction[]) => {
     const pairs: number[][] = newDetections.map((det) => {
@@ -56,14 +65,10 @@ const Solve: FC<SolveProps> = () => {
     }
   }, []);
 
-  const handleSelectChange = (
-    event: SelectChangeEvent<number>,
-    child: React.ReactNode
-  ) => {
+  const handleSelectChange = (event: SelectChangeEvent<number>) => {
     setSelectedValue(Number(event.target.value));
   };
 
-  // Toggle sorting when a header is clicked.
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -73,7 +78,6 @@ const Solve: FC<SolveProps> = () => {
     }
   };
 
-  // Memoize sorted response.
   const sortedComposeResponse = useMemo(() => {
     return composeResponse.slice().sort((a, b) => {
       const aVal = a[sortBy];
@@ -106,14 +110,21 @@ const Solve: FC<SolveProps> = () => {
           mb: 0,
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <IconButton component={Link} to="/" sx={{ p: 0 }}>
-          <ArrowBackIcon sx={{ color: "white" }} />
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <IconButton component={Link} to="/" sx={{ p: 0 }}>
+            <ArrowBackIcon sx={{ color: "white" }} />
+          </IconButton>
+          <Typography variant="h5" component="h1" sx={{ ml: 1 }}>
+            Solve
+          </Typography>
+        </Box>
+
+        <IconButton onClick={handleOpenHelp}>
+          <HelpOutlineIcon sx={{ color: "white" }} />
         </IconButton>
-        <Typography variant="h5" component="h1" sx={{ ml: 1 }}>
-          Solve
-        </Typography>
       </Box>
 
       <Webcam modelConfig={DOMINO_YOLOV8s} onDetections={handleDetections} />
@@ -149,87 +160,36 @@ const Solve: FC<SolveProps> = () => {
             composeResponse &&
             composeResponse.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="h6">
-                  Possible paths:
-                </Typography>
+                <Typography variant="h6">Possible paths:</Typography>
                 <Box sx={{ overflowX: "auto" }}>
                   <Table sx={{ fontSize: "0.8rem" }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ color: "black" }}>
-                          <TableSortLabel
-                            active={sortBy === "sequenceLength"}
-                            direction={
-                              sortBy === "sequenceLength"
-                                ? sortDirection
-                                : "asc"
-                            }
-                            onClick={() => handleSort("sequenceLength")}
-                            sx={{
-                              color: "black",
-                              "& .MuiTableSortLabel-icon": {
-                                color: "black !important",
-                              },
-                              "&.Mui-active": { color: "black" },
-                            }}
-                          >
-                            Sequence Length
-                          </TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ color: "black" }}>
-                          <TableSortLabel
-                            active={sortBy === "sequenceScore"}
-                            direction={
-                              sortBy === "sequenceScore" ? sortDirection : "asc"
-                            }
-                            onClick={() => handleSort("sequenceScore")}
-                            sx={{
-                              color: "black",
-                              "& .MuiTableSortLabel-icon": {
-                                color: "black !important",
-                              },
-                              "&.Mui-active": { color: "black" },
-                            }}
-                          >
-                            Sequence Score
-                          </TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ color: "black" }}>
-                          <TableSortLabel
-                            active={sortBy === "unusedScore"}
-                            direction={
-                              sortBy === "unusedScore" ? sortDirection : "asc"
-                            }
-                            onClick={() => handleSort("unusedScore")}
-                            sx={{
-                              color: "black",
-                              "& .MuiTableSortLabel-icon": {
-                                color: "black !important",
-                              },
-                              "&.Mui-active": { color: "black" },
-                            }}
-                          >
-                            Unused Score
-                          </TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ color: "black" }}>
-                          <TableSortLabel
-                            active={sortBy === "unused"}
-                            direction={
-                              sortBy === "unused" ? sortDirection : "asc"
-                            }
-                            onClick={() => handleSort("unused")}
-                            sx={{
-                              color: "black",
-                              "& .MuiTableSortLabel-icon": {
-                                color: "black !important",
-                              },
-                              "&.Mui-active": { color: "black" },
-                            }}
-                          >
-                            Unused Pieces
-                          </TableSortLabel>
-                        </TableCell>
+                        {[
+                          { id: "sequenceLength", label: "Sequence Length" },
+                          { id: "sequenceScore", label: "Sequence Score" },
+                          { id: "unusedScore", label: "Unused Score" },
+                          { id: "unused", label: "Unused Pieces" },
+                        ].map(({ id, label }) => (
+                          <TableCell key={id} sx={{ color: "black" }}>
+                            <TableSortLabel
+                              active={sortBy === id}
+                              direction={
+                                sortBy === id ? sortDirection : "asc"
+                              }
+                              onClick={() => handleSort(id)}
+                              sx={{
+                                color: "black",
+                                "& .MuiTableSortLabel-icon": {
+                                  color: "black !important",
+                                },
+                                "&.Mui-active": { color: "black" },
+                              }}
+                            >
+                              {label}
+                            </TableSortLabel>
+                          </TableCell>
+                        ))}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -254,9 +214,20 @@ const Solve: FC<SolveProps> = () => {
                             </TableRow>
                             <TableRow sx={{ backgroundColor: rowBgColor }}>
                               <TableCell sx={{ color: "black" }} colSpan={4}>
-                                {item.sequence.map(([left, right]: [number, number], index: number) => (
-                                  <Domino key={index} left={left} right={right} width="50px" margin="2px 3px 2px 0" />
-                                ))}
+                                {item.sequence.map(
+                                  (
+                                    [left, right]: [number, number],
+                                    index: number
+                                  ) => (
+                                    <Domino
+                                      key={index}
+                                      left={left}
+                                      right={right}
+                                      width="50px"
+                                      margin="2px 3px 2px 0"
+                                    />
+                                  )
+                                )}
                               </TableCell>
                             </TableRow>
                           </React.Fragment>
@@ -269,6 +240,33 @@ const Solve: FC<SolveProps> = () => {
             )}
         </CardContent>
       </Card>
+
+      {/* Help Dialog */}
+      <Dialog open={helpOpen} onClose={handleCloseHelp}>
+        <DialogTitle sx={{ color: "black" }}>Instructions</DialogTitle>
+        <DialogContent sx={{ color: "black" }}>
+          <Typography>
+            1. Capture or upload the dominoes image
+          </Typography>
+          <Typography>
+            2. Check if all pieces were detected correctly
+          </Typography>
+          <Typography>
+            3. Add / remove / edit boxes if needed
+          </Typography>
+          <Typography>
+            4. Select a starting value from the dropdown
+          </Typography>
+          <Typography>
+            5. Check the table to explore different paths
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHelp} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
