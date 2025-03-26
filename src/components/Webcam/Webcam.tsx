@@ -112,7 +112,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
     const startTime = performance.now();
     const detections = await yoloModel.predict(offscreenCanvas);
     const elapsedTime = performance.now() - startTime;
-    if (elapsedTime > 2500 && livePredictions && !showSlowDialog) {
+    if (!loading && elapsedTime > 2000 && livePredictions && !showSlowDialog) {
       setLivePredictions(false);
       setShowSlowDialog(true);
     }
@@ -145,7 +145,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
     }
     return detections;
-  }, [yoloModel, frozen, livePredictions, showPredictionScore, drawLabel, showSlowDialog]);
+  }, [yoloModel, frozen, loading, livePredictions, showPredictionScore, drawLabel, showSlowDialog]);
 
   // ===== Toggle Smartphone Light =====
   const toggleLight = useCallback(() => {
