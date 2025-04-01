@@ -87,12 +87,83 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const padding = 2;
       ctx.font = `${fontSize}px Arial`;
       ctx.textBaseline = 'middle';
+  
+      // Split class and score (if any)
+      const classOnly = label.split(' ')[0]; // e.g. "3x5" from "3x5 (98.2%)"
       const textWidth = ctx.measureText(label).width;
+  
+      // Domino logic
+      let dominoImagesWidth = 0;
+      let leftDomino: HTMLImageElement | null = null;
+      let rightDomino: HTMLImageElement | null = null;
+      const dominoHeight = 20;
+      const dominoWidth = dominoHeight;
+  
+      if (classOnly.includes('x')) {
+        const parts = classOnly.split('x');
+        if (parts.length === 2 && !isNaN(+parts[0]) && !isNaN(+parts[1])) {
+          dominoImagesWidth = dominoWidth * 2;
+  
+          leftDomino = new Image();
+          rightDomino = new Image();
+          leftDomino.src = `/images/domino_half_${parts[0]}.png`;
+          rightDomino.src = `/images/domino_half_${parts[1]}.png`;
+        }
+      }
+  
+      const rectWidth = textWidth + padding * 2 + dominoImagesWidth;
       const rectHeight = fontSize + 2 * padding;
+  
+      // Draw background box
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(x - padding, y - rectHeight - 1, textWidth + padding * 2, rectHeight);
+      ctx.fillRect(x - padding, y - rectHeight - 1, rectWidth, rectHeight);
+  
+      // Draw label text
       ctx.fillStyle = 'white';
       ctx.fillText(label, x, y - rectHeight / 2);
+  
+      // Draw domino images
+      if (leftDomino && rightDomino) {
+        const imageY = y - rectHeight;
+        const leftX = x + textWidth + padding;
+        const rightX = leftX + dominoWidth;
+  
+        if (leftDomino.complete) {
+          ctx.drawImage(leftDomino, leftX, imageY, dominoWidth, dominoHeight);
+        } else {
+          leftDomino.onload = () => {
+            ctx.drawImage(leftDomino!, leftX, imageY, dominoWidth, dominoHeight);
+          };
+        }
+  
+        if (rightDomino.complete) {
+          ctx.save();
+          ctx.translate(rightX + dominoWidth / 2, imageY + dominoHeight / 2);
+          ctx.rotate(Math.PI);
+          ctx.drawImage(
+            rightDomino,
+            -dominoWidth / 2,
+            -dominoHeight / 2,
+            dominoWidth,
+            dominoHeight
+          );
+          ctx.restore();
+        } else {
+          rightDomino.onload = () => {
+            ctx.save();
+            ctx.translate(rightX + dominoWidth / 2, imageY + dominoHeight / 2);
+            ctx.rotate(Math.PI);
+            ctx.drawImage(
+              rightDomino!,
+              -dominoWidth / 2,
+              -dominoHeight / 2,
+              dominoWidth,
+              dominoHeight
+            );
+            ctx.restore();
+          };
+        }
+      }
     },
     []
   );
