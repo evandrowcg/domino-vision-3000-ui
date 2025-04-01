@@ -72,6 +72,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [lightOn, setLightOn] = useState(false);
   // New state for showing the torch dialog when not available.
   const [showTorchDialog, setShowTorchDialog] = useState(false);
+  // New state for drawing domino images in the label (enabled by default)
+  const [drawDomino, setDrawDomino] = useState(true);
 
   // ===== Model Instance =====
   const yoloModel = useMemo(
@@ -92,14 +94,14 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const classOnly = label.split(' ')[0]; // e.g. "3x5" from "3x5 (98.2%)"
       const textWidth = ctx.measureText(label).width;
   
-      // Domino logic
+      // Domino logic (only if enabled)
       let dominoImagesWidth = 0;
       let leftDomino: HTMLImageElement | null = null;
       let rightDomino: HTMLImageElement | null = null;
       const dominoHeight = 20;
       const dominoWidth = dominoHeight;
   
-      if (classOnly.includes('x')) {
+      if (drawDomino && classOnly.includes('x')) {
         const parts = classOnly.split('x');
         if (parts.length === 2 && !isNaN(+parts[0]) && !isNaN(+parts[1])) {
           dominoImagesWidth = dominoWidth * 2;
@@ -122,7 +124,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       ctx.fillStyle = 'white';
       ctx.fillText(label, x, y - rectHeight / 2);
   
-      // Draw domino images
+      // Draw domino images if available
       if (leftDomino && rightDomino) {
         const imageY = y - rectHeight;
         const leftX = x + textWidth + padding;
@@ -165,7 +167,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
         }
       }
     },
-    []
+    [drawDomino]
   );
 
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
@@ -583,6 +585,17 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               <MenuItem
                 onClick={(e) => {
                   e.stopPropagation();
+                  setDrawDomino(!drawDomino);
+                }}
+              >
+                <Checkbox checked={drawDomino} />
+                <Typography variant="inherit" style={{ color: 'black' }}>
+                  Draw domino
+                </Typography>
+              </MenuItem>
+              <MenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
                   setShowPredictionScore(!showPredictionScore);
                 }}
               >
@@ -591,7 +604,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   Predictions score
                 </Typography>
               </MenuItem>
-              {/* New Menu Item for Smartphone Light */}
               <MenuItem
                 onClick={(e) => {
                   e.stopPropagation();
