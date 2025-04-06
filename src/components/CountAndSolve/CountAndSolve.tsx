@@ -115,7 +115,9 @@ const CountSection: FC<{ totalCount: number; totalSum: number }> = ({
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: commonTextColor }} />}
-        sx={{ "& .MuiTypography-root": { color: commonTextColor } }}
+        sx={{ 
+            backgroundColor: "lightgray",
+            "& .MuiTypography-root": { color: commonTextColor } }}
       >
         <Typography variant="h6" sx={{ color: commonTextColor }}>
           Count
@@ -163,7 +165,9 @@ const SolveSection: FC<SolveSectionProps> = ({
   >
     <AccordionSummary
       expandIcon={<ExpandMoreIcon sx={{ color: commonTextColor }} />}
-      sx={{ "& .MuiTypography-root": { color: commonTextColor } }}
+      sx={{ 
+        backgroundColor: "lightgray",
+        "& .MuiTypography-root": { color: commonTextColor } }}
     >
       <Typography variant="h6" sx={{ color: commonTextColor }}>
         Solve
