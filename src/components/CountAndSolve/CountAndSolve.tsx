@@ -192,7 +192,6 @@ const SolveSection: FC<SolveSectionProps> = ({
         </FormControl>
         <Domino left={selectedValue} right={selectedValue} width="75px" />
       </Box>
-      {sortedComposeResponse.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ color: commonTextColor }}>
             Possible paths:
@@ -265,7 +264,6 @@ const SolveSection: FC<SolveSectionProps> = ({
             </Table>
           </Box>
         </Box>
-      )}
     </AccordionDetails>
   </Accordion>
 );
