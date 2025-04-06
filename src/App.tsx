@@ -1,9 +1,8 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 import Home from "./components/Home/Home";
-import Count from "./components/Count/Count";
-import Solve from "./components/Solve/Solve";
+import CountAndSolve from "./components/CountAndSolve/CountAndSolve";
 
 const theme = createTheme({
   palette: {
@@ -29,8 +28,9 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/count" element={<Count />} />
-          <Route path="/solve" element={<Solve />} />
+          <Route path="/start" element={<CountAndSolve />} />
+          {/* Catch-all route that redirects to "/" */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </ThemeProvider>

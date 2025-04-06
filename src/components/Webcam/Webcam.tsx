@@ -505,7 +505,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   // ===== Render =====
   return (
     <>
-      <Card style={{ maxWidth: 800, margin: '20px auto', color: 'black' }}>
+      <Card style={{ maxWidth: 800, margin: '20px auto 0', color: 'black' }}>
         <CardContent>
           <div style={{ position: 'relative', width: '100%' }}>
             <video
@@ -693,6 +693,9 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   </FormControl>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+                <Button variant="text" size="small" onClick={() => setShowClassSelection(false)}>
+                    Cancel
+                  </Button>
                   <Button
                     variant="contained"
                     onClick={() => {
@@ -703,9 +706,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                     }}
                   >
                     Confirm
-                  </Button>
-                  <Button variant="text" size="small" onClick={() => setShowClassSelection(false)}>
-                    Cancel
                   </Button>
                 </Box>
               </Box>
