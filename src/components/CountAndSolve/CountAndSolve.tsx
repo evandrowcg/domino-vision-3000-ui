@@ -115,16 +115,17 @@ const CountSection: FC<{ totalCount: number; totalSum: number }> = ({
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: commonTextColor }} />}
-        sx={{ 
-            backgroundColor: "lightgray",
-            "& .MuiTypography-root": { color: commonTextColor } }}
+        sx={{
+          backgroundColor: "lightgray",
+          "& .MuiTypography-root": { color: commonTextColor },
+        }}
       >
         <Typography variant="h6" sx={{ color: commonTextColor }}>
           Count
         </Typography>
       </AccordionSummary>
       <AccordionDetails>
-        <Typography variant="body1" sx={{ color: commonTextColor }}>
+        <Typography variant="body1" sx={{ color: commonTextColor, textAlign: "center" }}>
           Total sum: {totalSum}
         </Typography>
       </AccordionDetails>
@@ -165,16 +166,17 @@ const SolveSection: FC<SolveSectionProps> = ({
   >
     <AccordionSummary
       expandIcon={<ExpandMoreIcon sx={{ color: commonTextColor }} />}
-      sx={{ 
+      sx={{
         backgroundColor: "lightgray",
-        "& .MuiTypography-root": { color: commonTextColor } }}
+        "& .MuiTypography-root": { color: commonTextColor },
+      }}
     >
       <Typography variant="h6" sx={{ color: commonTextColor }}>
         Solve
       </Typography>
     </AccordionSummary>
     <AccordionDetails>
-      <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 2 }}>
+      <Box sx={{ mt: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel id="dropdown-label" sx={{ color: commonTextColor }}>
             Starting value
@@ -196,78 +198,78 @@ const SolveSection: FC<SolveSectionProps> = ({
         </FormControl>
         <Domino left={selectedValue} right={selectedValue} width="75px" />
       </Box>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body1" sx={{ color: commonTextColor }}>
-            Possible paths:
-          </Typography>
-          <Box sx={{ overflowX: "auto" }}>
-            <Table sx={{ fontSize: "0.8rem" }}>
-              <TableHead>
-                <TableRow>
-                  {[
-                    { id: "sequenceLength", label: "Sequence Length" },
-                    { id: "sequenceScore", label: "Sequence Score" },
-                    { id: "unusedScore", label: "Unused Score" },
-                    { id: "unused", label: "Unused Pieces" },
-                  ].map(({ id, label }) => (
-                    <TableCell key={id} sx={{ color: commonTextColor }}>
-                      <TableSortLabel
-                        active={sortBy === id}
-                        direction={sortBy === id ? sortDirection : "asc"}
-                        onClick={() => onSort(id)}
-                        sx={{
-                          color: commonTextColor,
-                          "& .MuiTableSortLabel-icon": {
-                            color: `${commonTextColor} !important`,
-                          },
-                          "&.Mui-active": { color: commonTextColor },
-                        }}
-                      >
-                        {label}
-                      </TableSortLabel>
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedComposeResponse.map((item, index) => {
-                  const rowBgColor = index % 2 === 0 ? "grey.100" : "grey.200";
-                  return (
-                    <React.Fragment key={index}>
-                      <TableRow sx={{ backgroundColor: rowBgColor }}>
-                        <TableCell sx={{ color: commonTextColor }}>
-                          {item.sequenceLength}
-                        </TableCell>
-                        <TableCell sx={{ color: commonTextColor }}>
-                          {item.sequenceScore}
-                        </TableCell>
-                        <TableCell sx={{ color: commonTextColor }}>
-                          {item.unusedScore}
-                        </TableCell>
-                        <TableCell sx={{ color: commonTextColor }}>
-                          {item.unused}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow sx={{ backgroundColor: rowBgColor }}>
-                        <TableCell sx={{ color: commonTextColor }} colSpan={4}>
-                          {item.sequence.map(([left, right], idx) => (
-                            <Domino
-                              key={idx}
-                              left={left}
-                              right={right}
-                              width="50px"
-                              margin="2px 3px 2px 0"
-                            />
-                          ))}
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Box>
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="body1" sx={{ color: commonTextColor }}>
+          Possible paths:
+        </Typography>
+        <Box sx={{ overflowX: "auto" }}>
+          <Table sx={{ fontSize: "0.8rem" }}>
+            <TableHead>
+              <TableRow>
+                {[
+                  { id: "sequenceLength", label: "Sequence Length" },
+                  { id: "sequenceScore", label: "Sequence Score" },
+                  { id: "unusedScore", label: "Unused Score" },
+                  { id: "unused", label: "Unused Pieces" },
+                ].map(({ id, label }) => (
+                  <TableCell key={id} sx={{ color: commonTextColor }}>
+                    <TableSortLabel
+                      active={sortBy === id}
+                      direction={sortBy === id ? sortDirection : "asc"}
+                      onClick={() => onSort(id)}
+                      sx={{
+                        color: commonTextColor,
+                        "& .MuiTableSortLabel-icon": {
+                          color: `${commonTextColor} !important`,
+                        },
+                        "&.Mui-active": { color: commonTextColor },
+                      }}
+                    >
+                      {label}
+                    </TableSortLabel>
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedComposeResponse.map((item, index) => {
+                const rowBgColor = index % 2 === 0 ? "grey.100" : "grey.200";
+                return (
+                  <React.Fragment key={index}>
+                    <TableRow sx={{ backgroundColor: rowBgColor }}>
+                      <TableCell sx={{ color: commonTextColor }}>
+                        {item.sequenceLength}
+                      </TableCell>
+                      <TableCell sx={{ color: commonTextColor }}>
+                        {item.sequenceScore}
+                      </TableCell>
+                      <TableCell sx={{ color: commonTextColor }}>
+                        {item.unusedScore}
+                      </TableCell>
+                      <TableCell sx={{ color: commonTextColor }}>
+                        {item.unused}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow sx={{ backgroundColor: rowBgColor }}>
+                      <TableCell sx={{ color: commonTextColor }} colSpan={4}>
+                        {item.sequence.map(([left, right], idx) => (
+                          <Domino
+                            key={idx}
+                            left={left}
+                            right={right}
+                            width="50px"
+                            margin="2px 3px 2px 0"
+                          />
+                        ))}
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
         </Box>
+      </Box>
     </AccordionDetails>
   </Accordion>
 );
