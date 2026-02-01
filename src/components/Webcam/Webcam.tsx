@@ -18,6 +18,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  CircularProgress,
 } from '@mui/material';
 import Box from '@mui/material/Box';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -31,10 +32,20 @@ import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 import Domino from '../Domino/Domino';
 import { preloadDominoImages, getDominoImage } from '../../utils/dominoImageCache';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 interface Point {
   x: number;
   y: number;
+}
+
+// Extended types for torch (flashlight) API - not in standard TypeScript definitions
+interface MediaTrackCapabilitiesWithTorch extends MediaTrackCapabilities {
+  torch?: boolean;
+}
+
+interface MediaTrackConstraintSetWithTorch extends MediaTrackConstraintSet {
+  torch?: boolean;
 }
 
 interface WebcamProps {
@@ -55,8 +66,6 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [frozen, setFrozen] = useState(false);
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [frozenPredictions, setFrozenPredictions] = useState<Prediction[]>([]);
-  const [livePredictions, setLivePredictions] = useState(true);
-  const [showPredictionScore, setShowPredictionScore] = useState(false);
   const [showSlowDialog, setShowSlowDialog] = useState(false);
   const [manualBoxMode, setManualBoxMode] = useState(false);
   const [removeBoxMode, setRemoveBoxMode] = useState(false);
@@ -73,8 +82,13 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   const [lightOn, setLightOn] = useState(false);
   // New state for showing the torch dialog when not available.
   const [showTorchDialog, setShowTorchDialog] = useState(false);
-  // New state for drawing domino images in the label (enabled by default)
-  const [drawDomino, setDrawDomino] = useState(true);
+  // State for camera error (permission denied or not available)
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // ===== Persisted User Preferences =====
+  const [livePredictions, setLivePredictions] = useLocalStorage('dv3k-livePredictions', true);
+  const [showPredictionScore, setShowPredictionScore] = useLocalStorage('dv3k-showPredictionScore', false);
+  const [drawDomino, setDrawDomino] = useLocalStorage('dv3k-drawDomino', true);
 
   // ===== Model Instance =====
   const yoloModel = useMemo(
@@ -194,29 +208,33 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       });
     }
     return detections;
-  }, [yoloModel, frozen, loading, livePredictions, showPredictionScore, drawLabel, showSlowDialog]);
+  }, [yoloModel, frozen, loading, livePredictions, showPredictionScore, drawLabel, showSlowDialog, setLivePredictions]);
 
   // ===== Toggle Smartphone Light =====
   const toggleLight = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities();
-      if ('torch' in capabilities && (capabilities as any).torch !== undefined) {
-        track.applyConstraints({ advanced: [{ torch: !lightOn }] } as any)
+      const capabilities = track.getCapabilities() as MediaTrackCapabilitiesWithTorch;
+      if (capabilities.torch !== undefined) {
+        const constraints: MediaTrackConstraints = {
+          advanced: [{ torch: !lightOn } as MediaTrackConstraintSetWithTorch]
+        };
+        track.applyConstraints(constraints)
           .then(() => setLightOn(!lightOn))
           .catch((error) => console.error("Error toggling torch:", error));
       } else {
         // Show dialog if torch is not supported.
         setShowTorchDialog(true);
         console.warn("Torch is not supported on this device.");
-      }      
+      }
     }
   }, [lightOn]);
 
   // ===== Video & Model Initialization =====
   const startVideo = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Camera access is not supported in this browser.');
       console.error('getUserMedia not supported');
       return;
     }
@@ -227,9 +245,23 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        setCameraError(null);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error accessing/playing video:', err);
+      if (err instanceof DOMException) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setCameraError('Camera permission denied. Please allow camera access to use this feature.');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          setCameraError('No camera found. Please connect a camera to use this feature.');
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          setCameraError('Camera is in use by another application.');
+        } else {
+          setCameraError('Unable to access camera. Please try again.');
+        }
+      } else {
+        setCameraError('Unable to access camera. Please try again.');
+      }
     }
   }, []);
 
@@ -312,6 +344,52 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
   useEffect(() => {
     if (onDetections) onDetections(frozenPredictions);
   }, [frozenPredictions, onDetections]);
+
+  // ===== Keyboard Navigation for Box Editing =====
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle when frozen and not in class selection dialog
+      if (!frozen || showClassSelection) return;
+
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          // Toggle Add Box mode
+          setManualBoxMode((prev) => !prev);
+          setRemoveBoxMode(false);
+          setEditBoxMode(false);
+          if (!manualBoxMode) {
+            setSelectedStart(0);
+            setSelectedEnd(0);
+          }
+          break;
+        case 'r':
+          // Toggle Remove Box mode
+          setRemoveBoxMode((prev) => !prev);
+          setManualBoxMode(false);
+          setEditBoxMode(false);
+          break;
+        case 'e':
+          // Toggle Edit Box mode
+          setEditBoxMode((prev) => !prev);
+          setManualBoxMode(false);
+          setRemoveBoxMode(false);
+          break;
+        case 'escape':
+          // Cancel all modes
+          setManualBoxMode(false);
+          setRemoveBoxMode(false);
+          setEditBoxMode(false);
+          setShowClassSelection(false);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [frozen, showClassSelection, manualBoxMode]);
 
   // ===== Event Handlers =====
 
@@ -598,24 +676,72 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               </MenuItem>
             </Menu>
             {loading && (
-              <div
-                style={{
+              <Box
+                sx={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  color: "white",
-                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.85)',
                   display: 'flex',
+                  flexDirection: 'column',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  fontSize: '24px',
                   zIndex: 30,
+                  gap: 2,
                 }}
               >
-                Loading model...
-              </div>
+                <CircularProgress color="primary" size={48} />
+                <Typography variant="body1" sx={{ color: 'white' }}>
+                  Loading AI model...
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'grey.500' }}>
+                  This may take a moment
+                </Typography>
+              </Box>
+            )}
+            {cameraError && !loading && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 29,
+                  p: 3,
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                  Camera Unavailable
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'grey.400', mb: 3, maxWidth: 300 }}>
+                  {cameraError}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={startVideo}
+                  >
+                    Try Again
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Upload Image
+                  </Button>
+                </Box>
+              </Box>
             )}
             {showClassSelection && (
               <Box

@@ -1,9 +1,12 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { ThemeProvider, createTheme, CssBaseline, Box, CircularProgress } from "@mui/material";
 import Home from "./components/Home/Home";
-import CountAndSolve from "./components/CountAndSolve/CountAndSolve";
 import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
+import SkipLink from "./components/SkipLink/SkipLink";
+
+// Lazy load the heavy component that includes TensorFlow.js
+const CountAndSolve = React.lazy(() => import("./components/CountAndSolve/CountAndSolve"));
 
 const theme = createTheme({
   palette: {
@@ -22,18 +25,38 @@ const theme = createTheme({
   },
 });
 
+// Loading fallback component
+const LoadingFallback = () => (
+  <Box
+    sx={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      minHeight: "100vh",
+      backgroundColor: "#212121",
+    }}
+  >
+    <CircularProgress color="primary" />
+  </Box>
+);
+
 const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <ErrorBoundary>
         <Router>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/start" element={<CountAndSolve />} />
-            {/* Catch-all route that redirects to "/" */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <SkipLink targetId="main-content" />
+          <Box component="main" id="main-content" tabIndex={-1} sx={{ outline: 'none' }}>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/start" element={<CountAndSolve />} />
+                {/* Catch-all route that redirects to "/" */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </Box>
         </Router>
       </ErrorBoundary>
     </ThemeProvider>

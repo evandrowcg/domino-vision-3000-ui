@@ -36,15 +36,16 @@ export class YoloModelTF {
   /**
    * Runs the YOLO model prediction on a given input image.
    * @param input A canvas element with the input image.
-   * @returns A list of Prediction objects.
+   * @returns A list of Prediction objects, or empty array on error.
    */
   async predict(input: HTMLCanvasElement): Promise<Prediction[]> {
-    // Ensure the model is loaded.
-    if (!this.model) {
-      await this.loadModel();
-    }
+    try {
+      // Ensure the model is loaded.
+      if (!this.model) {
+        await this.loadModel();
+      }
 
-    // Preprocess the image:
+      // Preprocess the image:
     // Instead of performing three slice operations for grayscale conversion using weighted sum,
     // we approximate by taking the mean across channels.
     const batchedInput = tf.tidy(() => {
@@ -144,5 +145,9 @@ export class YoloModelTF {
     }
 
     return detections;
+    } catch (error) {
+      console.error('Error during model prediction:', error);
+      return [];
+    }
   }
 }
