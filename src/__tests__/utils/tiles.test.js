@@ -12,7 +12,7 @@ describe('combine function', () => {
 
     expect(result).toBeDefined();
     expect(result.length).toBeGreaterThan(0);
-    expect(result[0].sequence).toContain('1,2'); // Ensure expected sequence format
+    expect(result[0].sequence).toContainEqual([1, 2]);
   });
 
   test('should return the best sequence for complex tiles', () => {

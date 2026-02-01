@@ -30,6 +30,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { ModelConfig } from '../../ai/ModelConfig';
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 import Domino from '../Domino/Domino';
+import { preloadDominoImages, getDominoImage } from '../../utils/dominoImageCache';
 
 interface Point {
   x: number;
@@ -89,82 +90,57 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
       const padding = 2;
       ctx.font = `${fontSize}px Arial`;
       ctx.textBaseline = 'middle';
-  
+
       // Split class and score (if any)
       const classOnly = label.split(' ')[0]; // e.g. "3x5" from "3x5 (98.2%)"
       const textWidth = ctx.measureText(label).width;
-  
+
       // Domino logic (only if enabled)
       let dominoImagesWidth = 0;
       let leftDomino: HTMLImageElement | null = null;
       let rightDomino: HTMLImageElement | null = null;
       const dominoHeight = 20;
       const dominoWidth = dominoHeight;
-  
+
       if (drawDomino && classOnly.includes('x')) {
         const parts = classOnly.split('x');
         if (parts.length === 2 && !isNaN(+parts[0]) && !isNaN(+parts[1])) {
           dominoImagesWidth = dominoWidth * 2;
-  
-          leftDomino = new Image();
-          rightDomino = new Image();
-          leftDomino.src = `/images/domino_half_${parts[0]}.png`;
-          rightDomino.src = `/images/domino_half_${parts[1]}.png`;
+          leftDomino = getDominoImage(+parts[0]);
+          rightDomino = getDominoImage(+parts[1]);
         }
       }
-  
+
       const rectWidth = textWidth + padding * 2 + dominoImagesWidth;
       const rectHeight = fontSize + 2 * padding;
-  
+
       // Draw background box
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(x - padding, y - rectHeight - 1, rectWidth, rectHeight);
-  
+
       // Draw label text
       ctx.fillStyle = 'white';
       ctx.fillText(label, x, y - rectHeight / 2);
-  
-      // Draw domino images if available
+
+      // Draw domino images if available (using cached images)
       if (leftDomino && rightDomino) {
         const imageY = y - rectHeight;
         const leftX = x + textWidth + padding;
         const rightX = leftX + dominoWidth;
-  
-        if (leftDomino.complete) {
-          ctx.drawImage(leftDomino, leftX, imageY, dominoWidth, dominoHeight);
-        } else {
-          leftDomino.onload = () => {
-            ctx.drawImage(leftDomino!, leftX, imageY, dominoWidth, dominoHeight);
-          };
-        }
-  
-        if (rightDomino.complete) {
-          ctx.save();
-          ctx.translate(rightX + dominoWidth / 2, imageY + dominoHeight / 2);
-          ctx.rotate(Math.PI);
-          ctx.drawImage(
-            rightDomino,
-            -dominoWidth / 2,
-            -dominoHeight / 2,
-            dominoWidth,
-            dominoHeight
-          );
-          ctx.restore();
-        } else {
-          rightDomino.onload = () => {
-            ctx.save();
-            ctx.translate(rightX + dominoWidth / 2, imageY + dominoHeight / 2);
-            ctx.rotate(Math.PI);
-            ctx.drawImage(
-              rightDomino!,
-              -dominoWidth / 2,
-              -dominoHeight / 2,
-              dominoWidth,
-              dominoHeight
-            );
-            ctx.restore();
-          };
-        }
+
+        ctx.drawImage(leftDomino, leftX, imageY, dominoWidth, dominoHeight);
+
+        ctx.save();
+        ctx.translate(rightX + dominoWidth / 2, imageY + dominoHeight / 2);
+        ctx.rotate(Math.PI);
+        ctx.drawImage(
+          rightDomino,
+          -dominoWidth / 2,
+          -dominoHeight / 2,
+          dominoWidth,
+          dominoHeight
+        );
+        ctx.restore();
       }
     },
     [drawDomino]
@@ -259,7 +235,10 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
 
   useEffect(() => {
     (async () => {
-      await yoloModel.loadModel();
+      await Promise.all([
+        yoloModel.loadModel(),
+        preloadDominoImages(),
+      ]);
       startVideo();
     })();
     const video = videoRef.current;
@@ -512,6 +491,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               ref={videoRef}
               playsInline
               muted
+              aria-label="Live camera feed"
               style={{
                 width: '100%',
                 borderRadius: 4,
@@ -561,6 +541,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
             />
             {/* Three-Dot Menu */}
             <IconButton
+              aria-label="Open menu"
               style={{ position: 'absolute', top: 8, right: 8, color: 'black', zIndex: 31 }}
               onClick={(event) => setMenuAnchorEl(event.currentTarget)}
             >
@@ -717,7 +698,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               <>
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <Tooltip title="Capture Image">
-                    <IconButton onClick={toggleFreeze} color="primary">
+                    <IconButton aria-label="Capture image" onClick={toggleFreeze} color="primary">
                       <CameraAltIcon />
                     </IconButton>
                   </Tooltip>
@@ -733,7 +714,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   }}
                 >
                   <Tooltip title="Upload Image">
-                    <IconButton onClick={() => fileInputRef.current?.click()} color="primary">
+                    <IconButton aria-label="Upload image" onClick={() => fileInputRef.current?.click()} color="primary">
                       <CloudUploadIcon />
                     </IconButton>
                   </Tooltip>
@@ -743,7 +724,7 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
               <>
                 <Box sx={{ textAlign: 'center' }}>
                   <Tooltip title="Resume">
-                    <IconButton onClick={toggleFreeze} color="primary">
+                    <IconButton aria-label="Resume video" onClick={toggleFreeze} color="primary">
                       <ArrowBackIcon />
                     </IconButton>
                   </Tooltip>
@@ -760,6 +741,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                 >
                   <Tooltip title="Add Box">
                     <IconButton
+                      aria-label="Add detection box"
+                      aria-pressed={manualBoxMode}
                       color={manualBoxMode ? 'success' : 'primary'}
                       onClick={() => {
                         if (!manualBoxMode) {
@@ -776,6 +759,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   </Tooltip>
                   <Tooltip title="Remove Box">
                     <IconButton
+                      aria-label="Remove detection box"
+                      aria-pressed={removeBoxMode}
                       color={removeBoxMode ? 'error' : 'primary'}
                       onClick={() => {
                         setRemoveBoxMode(!removeBoxMode);
@@ -788,6 +773,8 @@ const Webcam: React.FC<WebcamProps> = ({ modelConfig, onDetections }) => {
                   </Tooltip>
                   <Tooltip title="Edit Box">
                     <IconButton
+                      aria-label="Edit detection box"
+                      aria-pressed={editBoxMode}
                       color={editBoxMode ? 'warning' : 'primary'}
                       onClick={() => {
                         setEditBoxMode(!editBoxMode);
