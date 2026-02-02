@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, RefObject } from 'react';
 import { Prediction } from '../ai/YoloModelTF';
+import { useLocalStorage } from './useLocalStorage';
 
 interface UsePredictionsOptions {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -10,6 +11,7 @@ interface UsePredictionsOptions {
   yoloModel: { predict: (canvas: HTMLCanvasElement) => Promise<Prediction[]> };
   drawLabel: (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => void;
   onLoadingChange: (loading: boolean) => void;
+  onDetections?: (detections: Prediction[]) => void;
 }
 
 interface UsePredictionsReturn {
@@ -40,15 +42,25 @@ export const usePredictions = ({
   yoloModel,
   drawLabel,
   onLoadingChange,
+  onDetections,
 }: UsePredictionsOptions): UsePredictionsReturn => {
   const [frozen, setFrozen] = useState(false);
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [frozenPredictions, setFrozenPredictions] = useState<Prediction[]>([]);
-  const [livePredictions, setLivePredictions] = useState(true);
-  const [showPredictionScore, setShowPredictionScore] = useState(false);
   const [showSlowDialog, setShowSlowDialog] = useState(false);
-  const [drawDomino, setDrawDomino] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Persisted user preferences
+  const [livePredictions, setLivePredictions] = useLocalStorage('dv3k-livePredictions', true);
+  const [showPredictionScore, setShowPredictionScore] = useLocalStorage('dv3k-showPredictionScore', false);
+  const [drawDomino, setDrawDomino] = useLocalStorage('dv3k-drawDomino', true);
+
+  // Call onDetections callback when frozenPredictions changes
+  useEffect(() => {
+    if (onDetections) {
+      onDetections(frozenPredictions);
+    }
+  }, [frozenPredictions, onDetections]);
 
   const processPredictions = useCallback(async (): Promise<Prediction[]> => {
     const video = videoRef.current;
@@ -99,7 +111,7 @@ export const usePredictions = ({
       });
     }
     return detections;
-  }, [videoRef, overlayCanvasRef, offscreenCanvasRef, yoloModel, frozen, isLoading, livePredictions, showPredictionScore, drawLabel, showSlowDialog, onLoadingChange]);
+  }, [videoRef, overlayCanvasRef, offscreenCanvasRef, yoloModel, frozen, isLoading, livePredictions, showPredictionScore, drawLabel, showSlowDialog, onLoadingChange, setLivePredictions]);
 
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;

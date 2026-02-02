@@ -1,4 +1,4 @@
-import { useState, useCallback, RefObject } from 'react';
+import { useState, useCallback, useEffect, RefObject } from 'react';
 import { Prediction } from '../ai/YoloModelTF';
 
 interface Point {
@@ -34,6 +34,9 @@ interface UseBoxEditingReturn {
   handleCanvasClick: (e: React.MouseEvent<HTMLCanvasElement>) => void;
   handleClassSelection: (selectedClass: string) => void;
   resetBoxEditingState: () => void;
+  toggleAddMode: () => void;
+  toggleRemoveMode: () => void;
+  toggleEditMode: () => void;
 }
 
 export const useBoxEditing = ({
@@ -62,6 +65,59 @@ export const useBoxEditing = ({
     setEditBoxMode(false);
     setEditBoxIndex(null);
   }, []);
+
+  // Mode toggle helpers that enforce mutual exclusivity
+  const toggleAddMode = useCallback(() => {
+    const newMode = !manualBoxMode;
+    setManualBoxMode(newMode);
+    setRemoveBoxMode(false);
+    setEditBoxMode(false);
+    if (newMode) {
+      setSelectedStart(0);
+      setSelectedEnd(0);
+    }
+  }, [manualBoxMode]);
+
+  const toggleRemoveMode = useCallback(() => {
+    setRemoveBoxMode(!removeBoxMode);
+    setManualBoxMode(false);
+    setEditBoxMode(false);
+  }, [removeBoxMode]);
+
+  const toggleEditMode = useCallback(() => {
+    setEditBoxMode(!editBoxMode);
+    setManualBoxMode(false);
+    setRemoveBoxMode(false);
+  }, [editBoxMode]);
+
+  // Keyboard shortcuts effect
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle when frozen and not in class selection dialog
+      if (!frozen || showClassSelection) return;
+
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'a':
+          toggleAddMode();
+          break;
+        case 'r':
+          toggleRemoveMode();
+          break;
+        case 'e':
+          toggleEditMode();
+          break;
+        case 'escape':
+          resetBoxEditingState();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [frozen, showClassSelection, toggleAddMode, toggleRemoveMode, toggleEditMode, resetBoxEditingState]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!frozen) return;
@@ -169,5 +225,8 @@ export const useBoxEditing = ({
     handleCanvasClick,
     handleClassSelection,
     resetBoxEditingState,
+    toggleAddMode,
+    toggleRemoveMode,
+    toggleEditMode,
   };
 };
