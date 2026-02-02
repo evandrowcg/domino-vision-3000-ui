@@ -9,7 +9,7 @@ interface UsePredictionsOptions {
   uploadedImageRef: RefObject<HTMLImageElement | null>;
   uploadedDimensions: { width: number; height: number } | null;
   yoloModel: { predict: (canvas: HTMLCanvasElement) => Promise<Prediction[]> };
-  drawLabel: (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => void;
+  drawLabel: (ctx: CanvasRenderingContext2D, x: number, y: number, label: string, drawDominoImages: boolean) => void;
   onLoadingChange: (loading: boolean) => void;
   onDetections?: (detections: Prediction[]) => void;
 }
@@ -107,11 +107,11 @@ export const usePredictions = ({
         const labelText = showPredictionScore
           ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
           : detection.class;
-        drawLabel(ctx, x * scaleX, y * scaleY, labelText);
+        drawLabel(ctx, x * scaleX, y * scaleY, labelText, drawDomino);
       });
     }
     return detections;
-  }, [videoRef, overlayCanvasRef, offscreenCanvasRef, yoloModel, frozen, isLoading, livePredictions, showPredictionScore, drawLabel, showSlowDialog, onLoadingChange, setLivePredictions]);
+  }, [videoRef, overlayCanvasRef, offscreenCanvasRef, yoloModel, frozen, isLoading, livePredictions, showPredictionScore, drawLabel, showSlowDialog, onLoadingChange, setLivePredictions, drawDomino]);
 
   const toggleFreeze = useCallback(async () => {
     const video = videoRef.current;
@@ -195,11 +195,11 @@ export const usePredictions = ({
           const labelText = showPredictionScore
             ? `${detection.class} (${(detection.score * 100).toFixed(1)}%)`
             : detection.class;
-          drawLabel(ctx, x / scaleX, y / scaleY, labelText);
+          drawLabel(ctx, x / scaleX, y / scaleY, labelText, drawDomino);
         });
       }
     }
-  }, [frozen, frozenPredictions, showPredictionScore, drawLabel, uploadedDimensions, overlayCanvasRef, uploadedImageRef, videoRef]);
+  }, [frozen, frozenPredictions, showPredictionScore, drawLabel, uploadedDimensions, overlayCanvasRef, uploadedImageRef, videoRef, drawDomino]);
 
   return {
     frozen,

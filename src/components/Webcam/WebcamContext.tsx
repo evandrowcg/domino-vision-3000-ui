@@ -107,7 +107,7 @@ export const WebcamProvider: React.FC<WebcamProviderProps> = ({
 
   // Draw label helper
   const drawLabel = useCallback(
-    (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => {
+    (ctx: CanvasRenderingContext2D, x: number, y: number, label: string, drawDominoImages: boolean) => {
       const fontSize = 18;
       const padding = 2;
       ctx.font = `${fontSize}px Arial`;
@@ -122,9 +122,7 @@ export const WebcamProvider: React.FC<WebcamProviderProps> = ({
       const dominoHeight = 20;
       const dominoWidth = dominoHeight;
 
-      // We need to check drawDomino from predictions hook, but it's not available here yet
-      // So we'll pass it through the callback
-      if (classOnly.includes('x')) {
+      if (drawDominoImages && classOnly.includes('x')) {
         const parts = classOnly.split('x');
         if (parts.length === 2 && !isNaN(+parts[0]) && !isNaN(+parts[1])) {
           dominoImagesWidth = dominoWidth * 2;
