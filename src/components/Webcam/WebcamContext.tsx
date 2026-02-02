@@ -228,6 +228,7 @@ export const WebcamProvider: React.FC<WebcamProviderProps> = ({
   }, [yoloModel, predictions]);
 
   // Model initialization and image preloading
+  // This effect should only run once on mount to initialize the model and camera
   useEffect(() => {
     (async () => {
       try {
@@ -241,7 +242,8 @@ export const WebcamProvider: React.FC<WebcamProviderProps> = ({
         camera.setLoading(false);
       }
     })();
-  }, [yoloModel, camera.startVideo, camera.setLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yoloModel]);
 
   // Extended toggleFreeze that also resets box editing and uploaded dimensions
   const extendedToggleFreeze = useCallback(async () => {
