@@ -47,6 +47,23 @@ const Home = () => {
           beta
         </Typography>
       </Box>
+      <Box
+        sx={{
+          mb: 3,
+          px: 2,
+          py: 1.5,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          maxWidth: 400,
+          bgcolor: "lightgray",
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Point your camera at dominoes and let AI detect, count, and solve your game — running entirely in your browser.
+        </Typography>
+      </Box>
       <Button
         variant="contained"
         color="primary"
