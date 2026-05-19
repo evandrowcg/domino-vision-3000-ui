@@ -12,7 +12,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
-    "@types/node": "^16.18.126",
+    "@types/node": "^18.19.130",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vercel/analytics": "^1.5.0",
