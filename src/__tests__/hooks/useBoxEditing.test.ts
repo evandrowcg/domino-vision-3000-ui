@@ -4,7 +4,7 @@ import { Prediction } from '../../ai/YoloModelTF';
 import { createMockCanvas } from '../../test-utils/mocks/canvas.mock';
 
 describe('useBoxEditing hook', () => {
-  const mockSetFrozenPredictions = jest.fn();
+  const mockSetFrozenPredictions = vi.fn();
 
   const createMockRefs = () => {
     const mockCanvas = createMockCanvas();
@@ -27,7 +27,7 @@ describe('useBoxEditing hook', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('initializes with default values', () => {

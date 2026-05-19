@@ -2,12 +2,17 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useCamera } from '../../hooks/useCamera';
 import { setupMediaDevicesMock, createMockMediaStream } from '../../test-utils/mocks/mediaDevices.mock';
 
-// Mock HTMLMediaElement.prototype.play
 beforeAll(() => {
   Object.defineProperty(HTMLMediaElement.prototype, 'play', {
     configurable: true,
     writable: true,
-    value: jest.fn().mockResolvedValue(undefined),
+    value: vi.fn().mockResolvedValue(undefined),
+  });
+  // happy-dom strictly validates srcObject type; allow any value for testing
+  Object.defineProperty(HTMLMediaElement.prototype, 'srcObject', {
+    configurable: true,
+    get() { return this._srcObject ?? null; },
+    set(val) { this._srcObject = val; },
   });
 });
 
@@ -19,7 +24,7 @@ describe('useCamera hook', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('initializes with default values', () => {
@@ -151,7 +156,7 @@ describe('useCamera hook', () => {
 
   test('toggleLight toggles light when torch is supported', async () => {
     const mockStream = createMockMediaStream();
-    mockStream.getVideoTracks()[0].getCapabilities = jest.fn().mockReturnValue({ torch: true });
+    mockStream.getVideoTracks()[0].getCapabilities = vi.fn().mockReturnValue({ torch: true });
 
     const videoRef = {
       current: {

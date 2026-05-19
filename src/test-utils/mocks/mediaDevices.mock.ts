@@ -4,9 +4,9 @@ import { jest } from '@jest/globals';
 
 export const createMockMediaStream = () => {
   const mockTrack = {
-    stop: jest.fn(),
-    getCapabilities: jest.fn().mockReturnValue({}),
-    applyConstraints: jest.fn().mockImplementation(() => Promise.resolve()),
+    stop: vi.fn(),
+    getCapabilities: vi.fn().mockReturnValue({}),
+    applyConstraints: vi.fn().mockImplementation(() => Promise.resolve()),
     enabled: true,
     kind: 'video' as const,
     label: 'Mock Camera',
@@ -14,11 +14,11 @@ export const createMockMediaStream = () => {
   };
 
   return {
-    getTracks: jest.fn().mockReturnValue([mockTrack]),
-    getVideoTracks: jest.fn().mockReturnValue([mockTrack]),
-    getAudioTracks: jest.fn().mockReturnValue([]),
-    addTrack: jest.fn(),
-    removeTrack: jest.fn(),
+    getTracks: vi.fn().mockReturnValue([mockTrack]),
+    getVideoTracks: vi.fn().mockReturnValue([mockTrack]),
+    getAudioTracks: vi.fn().mockReturnValue([]),
+    addTrack: vi.fn(),
+    removeTrack: vi.fn(),
     active: true,
   };
 };
@@ -37,23 +37,23 @@ export const createMockMediaDevices = (options: {
   const mockStream = createMockMediaStream();
 
   if (options.supportsTorch) {
-    mockStream.getVideoTracks()[0].getCapabilities = jest.fn().mockReturnValue({ torch: true });
+    mockStream.getVideoTracks()[0].getCapabilities = vi.fn().mockReturnValue({ torch: true });
   }
 
   return {
     getUserMedia: options.shouldFail
-      ? jest.fn().mockImplementation(() =>
+      ? vi.fn().mockImplementation(() =>
           Promise.reject(createDOMException(options.errorName || 'NotAllowedError', 'Permission denied'))
         )
-      : jest.fn().mockImplementation(() =>
+      : vi.fn().mockImplementation(() =>
           Promise.resolve(mockStream as unknown as MediaStream)
         ),
-    enumerateDevices: jest.fn().mockImplementation(() =>
+    enumerateDevices: vi.fn().mockImplementation(() =>
       Promise.resolve([
         { deviceId: '1', groupId: '1', kind: 'videoinput', label: 'Camera 1', toJSON: () => ({}) },
       ] as MediaDeviceInfo[])
     ),
-    getSupportedConstraints: jest.fn().mockReturnValue({
+    getSupportedConstraints: vi.fn().mockReturnValue({
       width: true,
       height: true,
       facingMode: true,
@@ -75,9 +75,9 @@ export const setupMediaDevicesMock = (options: Parameters<typeof createMockMedia
 
 export const createMockVideoElement = () => {
   const videoElement = {
-    play: jest.fn().mockImplementation(() => Promise.resolve()),
-    pause: jest.fn(),
-    load: jest.fn(),
+    play: vi.fn().mockImplementation(() => Promise.resolve()),
+    pause: vi.fn(),
+    load: vi.fn(),
     srcObject: null as MediaStream | null,
     videoWidth: 640,
     videoHeight: 480,
@@ -85,8 +85,8 @@ export const createMockVideoElement = () => {
     clientHeight: 480,
     readyState: 4,
     currentTime: 0,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
   };
 
   return videoElement;

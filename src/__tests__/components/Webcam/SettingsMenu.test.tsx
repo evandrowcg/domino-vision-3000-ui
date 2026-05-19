@@ -11,54 +11,54 @@ beforeAll(() => {
 });
 
 // Mock TensorFlow.js
-jest.mock('@tensorflow/tfjs', () => ({
-  loadGraphModel: jest.fn().mockResolvedValue({
+vi.mock('@tensorflow/tfjs', () => ({
+  loadGraphModel: vi.fn().mockResolvedValue({
     inputs: [{ shape: [1, 640, 640, 3] }],
-    execute: jest.fn().mockReturnValue({
-      transpose: jest.fn().mockReturnThis(),
-      slice: jest.fn().mockReturnThis(),
-      sub: jest.fn().mockReturnThis(),
-      add: jest.fn().mockReturnThis(),
-      div: jest.fn().mockReturnThis(),
-      squeeze: jest.fn().mockReturnThis(),
-      max: jest.fn().mockReturnThis(),
-      argMax: jest.fn().mockReturnThis(),
-      dispose: jest.fn(),
-      data: jest.fn().mockResolvedValue(new Float32Array(100)),
+    execute: vi.fn().mockReturnValue({
+      transpose: vi.fn().mockReturnThis(),
+      slice: vi.fn().mockReturnThis(),
+      sub: vi.fn().mockReturnThis(),
+      add: vi.fn().mockReturnThis(),
+      div: vi.fn().mockReturnThis(),
+      squeeze: vi.fn().mockReturnThis(),
+      max: vi.fn().mockReturnThis(),
+      argMax: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
+      data: vi.fn().mockResolvedValue(new Float32Array(100)),
       shape: [1, 100, 4],
     }),
   }),
   browser: {
-    fromPixels: jest.fn().mockReturnValue({
-      mean: jest.fn().mockReturnThis(),
-      div: jest.fn().mockReturnThis(),
-      expandDims: jest.fn().mockReturnThis(),
-      dispose: jest.fn(),
+    fromPixels: vi.fn().mockReturnValue({
+      mean: vi.fn().mockReturnThis(),
+      div: vi.fn().mockReturnThis(),
+      expandDims: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
     }),
   },
   image: {
-    resizeBilinear: jest.fn().mockReturnValue({
-      div: jest.fn().mockReturnThis(),
-      expandDims: jest.fn().mockReturnThis(),
-      dispose: jest.fn(),
+    resizeBilinear: vi.fn().mockReturnValue({
+      div: vi.fn().mockReturnThis(),
+      expandDims: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
     }),
-    nonMaxSuppressionAsync: jest.fn().mockResolvedValue({
-      data: jest.fn().mockResolvedValue(new Int32Array([0])),
-      dispose: jest.fn(),
+    nonMaxSuppressionAsync: vi.fn().mockResolvedValue({
+      data: vi.fn().mockResolvedValue(new Int32Array([0])),
+      dispose: vi.fn(),
     }),
   },
-  tidy: jest.fn((fn) => fn()),
-  concat: jest.fn().mockReturnValue({
-    squeeze: jest.fn().mockReturnThis(),
-    dispose: jest.fn(),
-    data: jest.fn().mockResolvedValue(new Float32Array(100)),
+  tidy: vi.fn((fn) => fn()),
+  concat: vi.fn().mockReturnValue({
+    squeeze: vi.fn().mockReturnThis(),
+    dispose: vi.fn(),
+    data: vi.fn().mockResolvedValue(new Float32Array(100)),
     shape: [100, 4],
   }),
 }));
 
-jest.mock('../../../utils/dominoImageCache', () => ({
-  preloadDominoImages: jest.fn().mockResolvedValue(undefined),
-  getDominoImage: jest.fn().mockReturnValue(null),
+vi.mock('../../../utils/dominoImageCache', () => ({
+  preloadDominoImages: vi.fn().mockResolvedValue(undefined),
+  getDominoImage: vi.fn().mockReturnValue(null),
 }));
 
 const renderWithProvider = (children: React.ReactNode) => {
@@ -76,7 +76,7 @@ describe('SettingsMenu component', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('renders menu button', () => {

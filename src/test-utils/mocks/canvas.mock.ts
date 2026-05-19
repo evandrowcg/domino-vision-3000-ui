@@ -1,41 +1,40 @@
 // @ts-nocheck
-// Test utility - type checking disabled to avoid issues with jest mock types
-import { jest } from '@jest/globals';
+// Test utility - type checking disabled to avoid issues with mock types
 
 export const createMockCanvasContext = () => ({
-  fillRect: jest.fn(),
-  clearRect: jest.fn(),
-  strokeRect: jest.fn(),
-  fillText: jest.fn(),
-  measureText: jest.fn().mockReturnValue({ width: 50 }),
-  drawImage: jest.fn(),
-  getImageData: jest.fn().mockReturnValue({
+  fillRect: vi.fn(),
+  clearRect: vi.fn(),
+  strokeRect: vi.fn(),
+  fillText: vi.fn(),
+  measureText: vi.fn().mockReturnValue({ width: 50 }),
+  drawImage: vi.fn(),
+  getImageData: vi.fn().mockReturnValue({
     data: new Uint8ClampedArray(640 * 480 * 4),
     width: 640,
     height: 480,
   }),
-  putImageData: jest.fn(),
-  createImageData: jest.fn().mockReturnValue({
+  putImageData: vi.fn(),
+  createImageData: vi.fn().mockReturnValue({
     data: new Uint8ClampedArray(640 * 480 * 4),
     width: 640,
     height: 480,
   }),
-  save: jest.fn(),
-  restore: jest.fn(),
-  translate: jest.fn(),
-  rotate: jest.fn(),
-  scale: jest.fn(),
-  beginPath: jest.fn(),
-  closePath: jest.fn(),
-  moveTo: jest.fn(),
-  lineTo: jest.fn(),
-  stroke: jest.fn(),
-  fill: jest.fn(),
-  arc: jest.fn(),
-  rect: jest.fn(),
-  clip: jest.fn(),
-  setTransform: jest.fn(),
-  resetTransform: jest.fn(),
+  save: vi.fn(),
+  restore: vi.fn(),
+  translate: vi.fn(),
+  rotate: vi.fn(),
+  scale: vi.fn(),
+  beginPath: vi.fn(),
+  closePath: vi.fn(),
+  moveTo: vi.fn(),
+  lineTo: vi.fn(),
+  stroke: vi.fn(),
+  fill: vi.fn(),
+  arc: vi.fn(),
+  rect: vi.fn(),
+  clip: vi.fn(),
+  setTransform: vi.fn(),
+  resetTransform: vi.fn(),
   fillStyle: '',
   strokeStyle: '',
   lineWidth: 1,
@@ -50,9 +49,9 @@ export const createMockCanvas = () => {
   const mockContext = createMockCanvasContext();
 
   return {
-    getContext: jest.fn().mockReturnValue(mockContext),
-    toDataURL: jest.fn().mockReturnValue('data:image/png;base64,mockImageData'),
-    toBlob: jest.fn((callback: (blob: Blob | null) => void) => {
+    getContext: vi.fn().mockReturnValue(mockContext),
+    toDataURL: vi.fn().mockReturnValue('data:image/png;base64,mockImageData'),
+    toBlob: vi.fn((callback: (blob: Blob | null) => void) => {
       callback(new Blob(['mock'], { type: 'image/png' }));
     }),
     width: 640,
@@ -61,7 +60,7 @@ export const createMockCanvas = () => {
       width: '640px',
       height: '480px',
     },
-    getBoundingClientRect: jest.fn().mockReturnValue({
+    getBoundingClientRect: vi.fn().mockReturnValue({
       top: 0,
       left: 0,
       width: 640,
@@ -69,8 +68,8 @@ export const createMockCanvas = () => {
       right: 640,
       bottom: 480,
     }),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
     mockContext,
   };
 };
@@ -87,7 +86,7 @@ export const setupCanvasMock = () => {
   mockCanvasInstance = mockCanvas;
 
   const originalCreateElement = document.createElement.bind(document);
-  jest.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+  vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
     if (tagName === 'canvas') {
       return createMockCanvas() as unknown as HTMLCanvasElement;
     }
@@ -112,6 +111,6 @@ export const createMockImage = () => ({
   naturalWidth: 640,
   naturalHeight: 480,
   complete: true,
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
 });

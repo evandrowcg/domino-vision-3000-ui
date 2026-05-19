@@ -7,12 +7,12 @@ beforeAll(() => {
   Object.defineProperty(HTMLMediaElement.prototype, 'play', {
     configurable: true,
     writable: true,
-    value: jest.fn().mockResolvedValue(undefined),
+    value: vi.fn().mockResolvedValue(undefined),
   });
   Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
     configurable: true,
     writable: true,
-    value: jest.fn(),
+    value: vi.fn(),
   });
 });
 
@@ -23,12 +23,12 @@ describe('usePredictions hook', () => {
   ];
 
   const mockYoloModel = {
-    predict: jest.fn().mockResolvedValue(mockPredictions),
+    predict: vi.fn().mockResolvedValue(mockPredictions),
   };
 
-  const mockDrawLabel = jest.fn();
-  const mockOnLoadingChange = jest.fn();
-  const mockOnDetections = jest.fn();
+  const mockDrawLabel = vi.fn();
+  const mockOnLoadingChange = vi.fn();
+  const mockOnDetections = vi.fn();
 
   const createMockRefs = () => {
     const videoElement = document.createElement('video');
@@ -36,8 +36,8 @@ describe('usePredictions hook', () => {
     Object.defineProperty(videoElement, 'videoHeight', { value: 480, writable: true });
     Object.defineProperty(videoElement, 'clientWidth', { value: 640, writable: true });
     Object.defineProperty(videoElement, 'clientHeight', { value: 480, writable: true });
-    videoElement.play = jest.fn().mockResolvedValue(undefined);
-    videoElement.pause = jest.fn();
+    videoElement.play = vi.fn().mockResolvedValue(undefined);
+    videoElement.pause = vi.fn();
 
     const overlayCanvas = createMockCanvas();
     const offscreenCanvas = createMockCanvas();
@@ -51,14 +51,14 @@ describe('usePredictions hook', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
     localStorage.clear();
     mockYoloModel.predict.mockResolvedValue(mockPredictions);
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('initializes with default values', () => {

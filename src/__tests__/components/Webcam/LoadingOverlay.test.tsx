@@ -5,12 +5,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 const mockContextValue = {
   loading: true,
   cameraError: null as string | null,
-  startVideo: jest.fn(),
+  startVideo: vi.fn(),
   fileInputRef: { current: null } as React.RefObject<HTMLInputElement | null>,
 };
 
 // Mock the WebcamContext
-jest.mock('../../../components/Webcam/WebcamContext', () => ({
+vi.mock('../../../components/Webcam/WebcamContext', () => ({
   useWebcamContext: () => mockContextValue,
 }));
 
@@ -19,7 +19,7 @@ import LoadingOverlay from '../../../components/Webcam/LoadingOverlay';
 
 describe('LoadingOverlay component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset to loading state
     mockContextValue.loading = true;
     mockContextValue.cameraError = null;

@@ -7,57 +7,57 @@ export const setupMediaElementMocks = () => {
   Object.defineProperty(HTMLMediaElement.prototype, 'play', {
     configurable: true,
     writable: true,
-    value: jest.fn().mockResolvedValue(undefined),
+    value: vi.fn().mockResolvedValue(undefined),
   });
   Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
     configurable: true,
     writable: true,
-    value: jest.fn(),
+    value: vi.fn(),
   });
 };
 
 // TensorFlow mock configuration
 export const tensorFlowMock = {
-  loadGraphModel: jest.fn().mockResolvedValue({
+  loadGraphModel: vi.fn().mockResolvedValue({
     inputs: [{ shape: [1, 640, 640, 3] }],
-    execute: jest.fn().mockReturnValue({
-      transpose: jest.fn().mockReturnThis(),
-      slice: jest.fn().mockReturnThis(),
-      sub: jest.fn().mockReturnThis(),
-      add: jest.fn().mockReturnThis(),
-      div: jest.fn().mockReturnThis(),
-      squeeze: jest.fn().mockReturnThis(),
-      max: jest.fn().mockReturnThis(),
-      argMax: jest.fn().mockReturnThis(),
-      dispose: jest.fn(),
-      data: jest.fn().mockResolvedValue(new Float32Array(100)),
+    execute: vi.fn().mockReturnValue({
+      transpose: vi.fn().mockReturnThis(),
+      slice: vi.fn().mockReturnThis(),
+      sub: vi.fn().mockReturnThis(),
+      add: vi.fn().mockReturnThis(),
+      div: vi.fn().mockReturnThis(),
+      squeeze: vi.fn().mockReturnThis(),
+      max: vi.fn().mockReturnThis(),
+      argMax: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
+      data: vi.fn().mockResolvedValue(new Float32Array(100)),
       shape: [1, 100, 4],
     }),
   }),
   browser: {
-    fromPixels: jest.fn().mockReturnValue({
-      mean: jest.fn().mockReturnThis(),
-      div: jest.fn().mockReturnThis(),
-      expandDims: jest.fn().mockReturnThis(),
-      dispose: jest.fn(),
+    fromPixels: vi.fn().mockReturnValue({
+      mean: vi.fn().mockReturnThis(),
+      div: vi.fn().mockReturnThis(),
+      expandDims: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
     }),
   },
   image: {
-    resizeBilinear: jest.fn().mockReturnValue({
-      div: jest.fn().mockReturnThis(),
-      expandDims: jest.fn().mockReturnThis(),
-      dispose: jest.fn(),
+    resizeBilinear: vi.fn().mockReturnValue({
+      div: vi.fn().mockReturnThis(),
+      expandDims: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
     }),
-    nonMaxSuppressionAsync: jest.fn().mockResolvedValue({
-      data: jest.fn().mockResolvedValue(new Int32Array([0])),
-      dispose: jest.fn(),
+    nonMaxSuppressionAsync: vi.fn().mockResolvedValue({
+      data: vi.fn().mockResolvedValue(new Int32Array([0])),
+      dispose: vi.fn(),
     }),
   },
-  tidy: jest.fn((fn: () => unknown) => fn()),
-  concat: jest.fn().mockReturnValue({
-    squeeze: jest.fn().mockReturnThis(),
-    dispose: jest.fn(),
-    data: jest.fn().mockResolvedValue(new Float32Array(100)),
+  tidy: vi.fn((fn: () => unknown) => fn()),
+  concat: vi.fn().mockReturnValue({
+    squeeze: vi.fn().mockReturnThis(),
+    dispose: vi.fn(),
+    data: vi.fn().mockResolvedValue(new Float32Array(100)),
     shape: [100, 4],
   }),
 };

@@ -3,70 +3,82 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Webcam from '../../../components/Webcam/Webcam';
 import { setupMediaDevicesMock } from '../../../test-utils/mocks/mediaDevices.mock';
 
-// Mock HTMLMediaElement.prototype.play before any imports that might use it
 beforeAll(() => {
   Object.defineProperty(HTMLMediaElement.prototype, 'play', {
     configurable: true,
     writable: true,
-    value: jest.fn().mockResolvedValue(undefined),
+    value: vi.fn().mockResolvedValue(undefined),
   });
   Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
     configurable: true,
     writable: true,
-    value: jest.fn(),
+    value: vi.fn(),
   });
+  // happy-dom strictly validates srcObject type; allow any value for testing
+  Object.defineProperty(HTMLMediaElement.prototype, 'srcObject', {
+    configurable: true,
+    get() { return this._srcObject ?? null; },
+    set(val) { this._srcObject = val; },
+  });
+  // Provide non-zero dimensions so processPredictions can run and clear loading state
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {
+    configurable: true,
+    get() { return 640; },
+  });
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', {
+    configurable: true,
+    get() { return 480; },
+  });
+  // Mock getContext at prototype level so canvas elements remain real DOM nodes
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    fillRect: vi.fn(), clearRect: vi.fn(), strokeRect: vi.fn(),
+    fillText: vi.fn(), measureText: vi.fn().mockReturnValue({ width: 50 }),
+    drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+    translate: vi.fn(), rotate: vi.fn(), beginPath: vi.fn(),
+    fillStyle: '', strokeStyle: '', lineWidth: 1, font: '',
+    textBaseline: 'alphabetic', textAlign: 'start',
+  } as unknown as CanvasRenderingContext2D);
 });
 
-// Create a chainable mock tensor
-const createMockTensor = () => {
-  const tensor: Record<string, unknown> = {
-    data: jest.fn().mockResolvedValue(new Float32Array(100)),
-    dispose: jest.fn(),
+// Mock TensorFlow.js — factory is hoisted, so tensor must be inlined
+vi.mock('@tensorflow/tfjs', () => {
+  const t: Record<string, unknown> = {
+    data: vi.fn().mockResolvedValue(new Float32Array(100)),
+    dispose: vi.fn(),
     shape: [1, 100, 4],
   };
-  tensor.transpose = jest.fn().mockReturnValue(tensor);
-  tensor.slice = jest.fn().mockReturnValue(tensor);
-  tensor.sub = jest.fn().mockReturnValue(tensor);
-  tensor.add = jest.fn().mockReturnValue(tensor);
-  tensor.div = jest.fn().mockReturnValue(tensor);
-  tensor.squeeze = jest.fn().mockReturnValue(tensor);
-  tensor.max = jest.fn().mockReturnValue(tensor);
-  tensor.argMax = jest.fn().mockReturnValue(tensor);
-  tensor.mean = jest.fn().mockReturnValue(tensor);
-  tensor.expandDims = jest.fn().mockReturnValue(tensor);
-  return tensor;
-};
-
-// Mock TensorFlow.js
-jest.mock('@tensorflow/tfjs', () => {
-  const mockTensor = createMockTensor();
+  t.transpose = vi.fn().mockReturnValue(t);
+  t.slice = vi.fn().mockReturnValue(t);
+  t.sub = vi.fn().mockReturnValue(t);
+  t.add = vi.fn().mockReturnValue(t);
+  t.div = vi.fn().mockReturnValue(t);
+  t.squeeze = vi.fn().mockReturnValue(t);
+  t.max = vi.fn().mockReturnValue(t);
+  t.argMax = vi.fn().mockReturnValue(t);
+  t.mean = vi.fn().mockReturnValue(t);
+  t.expandDims = vi.fn().mockReturnValue(t);
   return {
-    loadGraphModel: jest.fn().mockResolvedValue({
+    loadGraphModel: vi.fn().mockResolvedValue({
       inputs: [{ shape: [1, 640, 640, 3] }],
-      execute: jest.fn().mockReturnValue(mockTensor),
+      execute: vi.fn().mockReturnValue(t),
     }),
-    browser: {
-      fromPixels: jest.fn().mockReturnValue(mockTensor),
-    },
+    browser: { fromPixels: vi.fn().mockReturnValue(t) },
     image: {
-      resizeBilinear: jest.fn().mockReturnValue(mockTensor),
-      nonMaxSuppressionAsync: jest.fn().mockResolvedValue({
-        data: jest.fn().mockResolvedValue(new Int32Array([0])),
-        dispose: jest.fn(),
+      resizeBilinear: vi.fn().mockReturnValue(t),
+      nonMaxSuppressionAsync: vi.fn().mockResolvedValue({
+        data: vi.fn().mockResolvedValue(new Int32Array([0])),
+        dispose: vi.fn(),
       }),
     },
-    tidy: jest.fn((fn) => {
-      const result = fn();
-      return result || mockTensor;
-    }),
-    concat: jest.fn().mockReturnValue(mockTensor),
+    tidy: vi.fn((fn: () => unknown) => fn() || t),
+    concat: vi.fn().mockReturnValue(t),
   };
 });
 
 // Mock domino image cache
-jest.mock('../../../utils/dominoImageCache', () => ({
-  preloadDominoImages: jest.fn().mockResolvedValue(undefined),
-  getDominoImage: jest.fn().mockReturnValue(null),
+vi.mock('../../../utils/dominoImageCache', () => ({
+  preloadDominoImages: vi.fn().mockResolvedValue(undefined),
+  getDominoImage: vi.fn().mockReturnValue(null),
 }));
 
 const mockModelConfig = {
@@ -81,7 +93,7 @@ describe('Webcam component', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('renders without crashing', async () => {
@@ -144,7 +156,7 @@ describe('Webcam component', () => {
   });
 
   test('calls onDetections callback when provided', async () => {
-    const onDetections = jest.fn();
+    const onDetections = vi.fn();
     render(<Webcam modelConfig={mockModelConfig} onDetections={onDetections} />);
 
     // Initial call with empty predictions

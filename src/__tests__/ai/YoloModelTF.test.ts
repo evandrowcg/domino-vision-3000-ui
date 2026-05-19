@@ -1,77 +1,77 @@
 import { YoloModelTF, Prediction } from '../../ai/YoloModelTF';
 
 // Mock TensorFlow.js - mock factory must be self-contained
-jest.mock('@tensorflow/tfjs', () => {
+vi.mock('@tensorflow/tfjs', () => {
   // Create mock tensor factory inside the mock to avoid hoisting issues
   const createTensor = (shape: number[] = [1, 100, 4]) => {
     const t: Record<string, unknown> = {
-      data: jest.fn().mockResolvedValue(new Float32Array(400)),
-      dispose: jest.fn(),
+      data: vi.fn().mockResolvedValue(new Float32Array(400)),
+      dispose: vi.fn(),
       shape,
     };
-    t.transpose = jest.fn().mockReturnValue(t);
-    t.slice = jest.fn().mockReturnValue(t);
-    t.sub = jest.fn().mockReturnValue(t);
-    t.add = jest.fn().mockReturnValue(t);
-    t.div = jest.fn().mockReturnValue(t);
-    t.squeeze = jest.fn().mockReturnValue(t);
-    t.max = jest.fn().mockReturnValue(t);
-    t.argMax = jest.fn().mockReturnValue(t);
-    t.mean = jest.fn().mockReturnValue(t);
-    t.expandDims = jest.fn().mockReturnValue(t);
+    t.transpose = vi.fn().mockReturnValue(t);
+    t.slice = vi.fn().mockReturnValue(t);
+    t.sub = vi.fn().mockReturnValue(t);
+    t.add = vi.fn().mockReturnValue(t);
+    t.div = vi.fn().mockReturnValue(t);
+    t.squeeze = vi.fn().mockReturnValue(t);
+    t.max = vi.fn().mockReturnValue(t);
+    t.argMax = vi.fn().mockReturnValue(t);
+    t.mean = vi.fn().mockReturnValue(t);
+    t.expandDims = vi.fn().mockReturnValue(t);
     return t;
   };
 
   const baseTensor = createTensor();
 
   return {
-    loadGraphModel: jest.fn().mockResolvedValue({
+    loadGraphModel: vi.fn().mockResolvedValue({
       inputs: [{ shape: [1, 640, 640, 3] }],
-      execute: jest.fn().mockReturnValue(createTensor([1, 8505, 12])),
+      execute: vi.fn().mockReturnValue(createTensor([1, 8505, 12])),
     }),
     browser: {
-      fromPixels: jest.fn().mockReturnValue(baseTensor),
+      fromPixels: vi.fn().mockReturnValue(baseTensor),
     },
     image: {
-      resizeBilinear: jest.fn().mockReturnValue(baseTensor),
-      nonMaxSuppressionAsync: jest.fn().mockResolvedValue({
-        data: jest.fn().mockResolvedValue(new Int32Array([0, 1])),
-        dispose: jest.fn(),
+      resizeBilinear: vi.fn().mockReturnValue(baseTensor),
+      nonMaxSuppressionAsync: vi.fn().mockResolvedValue({
+        data: vi.fn().mockResolvedValue(new Int32Array([0, 1])),
+        dispose: vi.fn(),
       }),
     },
-    tidy: jest.fn((fn) => {
+    tidy: vi.fn((fn) => {
       const result = fn();
       // Always ensure result has dispose method
       if (result && typeof result === 'object') {
         if (!result.dispose) {
-          result.dispose = jest.fn();
+          result.dispose = vi.fn();
         }
         return result;
       }
       // If result is null/undefined or not an object, return a tensor with dispose
       return createTensor();
     }),
-    concat: jest.fn().mockReturnValue(createTensor([100, 4])),
+    concat: vi.fn().mockReturnValue(createTensor([100, 4])),
   };
 });
 
 // Helper function for creating mock tensors in tests
 const createMockTensor = (shape: number[] = [1, 100, 4]) => {
   const tensor: Record<string, unknown> = {
-    data: jest.fn().mockResolvedValue(new Float32Array(400)),
-    dispose: jest.fn(),
+    data: vi.fn().mockResolvedValue(new Float32Array(400)),
+    dispose: vi.fn(),
     shape,
   };
-  tensor.transpose = jest.fn().mockReturnValue(tensor);
-  tensor.slice = jest.fn().mockReturnValue(tensor);
-  tensor.sub = jest.fn().mockReturnValue(tensor);
-  tensor.add = jest.fn().mockReturnValue(tensor);
-  tensor.div = jest.fn().mockReturnValue(tensor);
-  tensor.squeeze = jest.fn().mockReturnValue(tensor);
-  tensor.max = jest.fn().mockReturnValue(tensor);
-  tensor.argMax = jest.fn().mockReturnValue(tensor);
-  tensor.mean = jest.fn().mockReturnValue(tensor);
-  tensor.expandDims = jest.fn().mockReturnValue(tensor);
+  tensor.transpose = vi.fn().mockReturnValue(tensor);
+  tensor.slice = vi.fn().mockReturnValue(tensor);
+  tensor.sub = vi.fn().mockReturnValue(tensor);
+  tensor.add = vi.fn().mockReturnValue(tensor);
+  tensor.div = vi.fn().mockReturnValue(tensor);
+  tensor.squeeze = vi.fn().mockReturnValue(tensor);
+  tensor.max = vi.fn().mockReturnValue(tensor);
+  tensor.argMax = vi.fn().mockReturnValue(tensor);
+  tensor.mean = vi.fn().mockReturnValue(tensor);
+  tensor.expandDims = vi.fn().mockReturnValue(tensor);
   return tensor;
 };
 
@@ -89,17 +89,17 @@ describe('YoloModelTF', () => {
     model = new YoloModelTF(mockModelUrl, mockClasses);
 
     // Clear mock call history but preserve implementations
-    (tf.loadGraphModel as jest.Mock).mockClear();
-    (tf.browser.fromPixels as jest.Mock).mockClear();
-    (tf.image.resizeBilinear as jest.Mock).mockClear();
-    (tf.image.nonMaxSuppressionAsync as jest.Mock).mockClear();
-    (tf.tidy as jest.Mock).mockClear();
-    (tf.concat as jest.Mock).mockClear();
+    (tf.loadGraphModel as vi.Mock).mockClear();
+    (tf.browser.fromPixels as vi.Mock).mockClear();
+    (tf.image.resizeBilinear as vi.Mock).mockClear();
+    (tf.image.nonMaxSuppressionAsync as vi.Mock).mockClear();
+    (tf.tidy as vi.Mock).mockClear();
+    (tf.concat as vi.Mock).mockClear();
 
     // Re-establish the loadGraphModel mock implementation
-    (tf.loadGraphModel as jest.Mock).mockResolvedValue({
+    (tf.loadGraphModel as vi.Mock).mockResolvedValue({
       inputs: [{ shape: [1, 640, 640, 3] }],
-      execute: jest.fn().mockReturnValue(createMockTensor([1, 8505, 12])),
+      execute: vi.fn().mockReturnValue(createMockTensor([1, 8505, 12])),
     });
   });
 
@@ -126,7 +126,7 @@ describe('YoloModelTF', () => {
     });
 
     test('throws error on model load failure', async () => {
-      (tf.loadGraphModel as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+      (tf.loadGraphModel as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
 
       await expect(model.loadModel()).rejects.toThrow('Network error');
     });
@@ -138,8 +138,8 @@ describe('YoloModelTF', () => {
 
     beforeEach(() => {
       mockContext = {
-        drawImage: jest.fn(),
-        getImageData: jest.fn().mockReturnValue({
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
           data: new Uint8ClampedArray(640 * 480 * 4),
           width: 640,
           height: 480,
@@ -147,14 +147,14 @@ describe('YoloModelTF', () => {
       } as unknown as CanvasRenderingContext2D;
 
       mockCanvas = {
-        getContext: jest.fn().mockReturnValue(mockContext),
+        getContext: vi.fn().mockReturnValue(mockContext),
         width: 640,
         height: 480,
       } as unknown as HTMLCanvasElement;
     });
 
     test('returns empty array on error', async () => {
-      (tf.browser.fromPixels as jest.Mock).mockImplementationOnce(() => {
+      (tf.browser.fromPixels as vi.Mock).mockImplementationOnce(() => {
         throw new Error('Canvas error');
       });
 
